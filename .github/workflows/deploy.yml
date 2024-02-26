@@ -14,6 +14,7 @@ env:
   AWS_REGION: us-east-1
   TF_BACKEND_BUCKET_REGION: us-east-1
   PROJECT_PATH: ./ai-endpoints
+  S3_BUCKET_NAME: ai-endpoint-c85c1af5-20240226134657000700000001
 
 jobs:
   deploy:
@@ -39,6 +40,6 @@ jobs:
           working-directory: ${{env.PROJECT_PATH}}
           backend: "s3"
         env:
-          TF_BACKEND_BUCKET: ${{env.PROJECT_PATH}}
+          TF_BACKEND_BUCKET: ${{env.S3_BUCKET_NAME}}
           TF_BACKEND_BUCKET_REGION: ${{ env.TF_BACKEND_BUCKET_REGION }}
           GEMINI_API: ${{ secrets.GEMINI }}
