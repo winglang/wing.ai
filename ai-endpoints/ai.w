@@ -16,7 +16,6 @@ pub class Ai {
     and this standard library reference: {fs.readFile("../files/std.txt", {encoding: "utf-8"})}
     and those examples: {fs.readFile("../files/examples.txt", {encoding: "utf-8"})}
     ONLY WRITE CODE IN YOUR ANSWERS";
-    log(" ");
   }
 
   extern "./gemini.js" static inflight _generateContent(prompt: str, context: str, history: MutArray<types.History>, onStream: ((str): void)?): str;
