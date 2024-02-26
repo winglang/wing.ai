@@ -37,6 +37,7 @@ jobs:
         run: |
           echo GEMINI_API=\"AIzaSyCIPndo6noFPB6WEFPgdlOsEeem-uKK0dM\" > ${{ env.PROJECT_PATH }}/.env
           cat ${{ env.PROJECT_PATH }}/.env
+          ls ${{ env.PROJECT_PATH }}
 
       - name: Setup Node.js v18
         uses: actions/setup-node@v4

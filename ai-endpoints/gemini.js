@@ -3,7 +3,7 @@ require("dotenv").config();
 
 const MODEL_NAME = "gemini-pro";
 const API_KEY = process.env.GEMINI_API;
-console.log("here");
+// console.log("here");
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({model: MODEL_NAME});

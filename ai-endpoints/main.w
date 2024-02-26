@@ -74,6 +74,7 @@ new std.Test(inflight () => {
   
   // with cId, and prompt
   let validRes = http.post(api.url + "/generate", {body: Json.stringify({prompt: "create an hello world app"}), headers: {"conversation-id": "123"}});
+  log(validRes.body);
   assert(validRes.ok);
   
   // fixcode
@@ -84,6 +85,7 @@ new std.Test(inflight () => {
 
   // with code
   let validFixRes = http.post(api.url + "/fix", {body: Json.stringify({code: "bring cloud"})});
+  log(validFixRes.body);
   assert(validFixRes.ok);
 
 }, {timeout: 5m}) as "testing api endpoints";
