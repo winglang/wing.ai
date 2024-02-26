@@ -1,0 +1,790 @@
+
+## A list of methods of Immutable Array.
+
+Get the value at the given index.
+```wing
+at(index: num): <T>
+```
+
+Merge arr to the end of this array.
+```wing
+concat(arr: Array): Array
+```
+
+Checks if this array includes searchElement.
+```wing
+contains(searchElement: <T>): bool
+```
+
+Create a mutable shallow copy of this array.
+```wing
+copyMut(): MutArray
+```
+
+Returns the index of the first occurrence of searchElement found.
+```wing
+indexOf(searchElement: <T>): num
+```
+
+Returns a new string containing the concatenated values in this array, separated by commas or a specified separator string.
+If the array has only
+one item, then that item will be returned without using the separator.
+```wing
+join(separator?: str): str
+```
+
+Returns the index of the last occurrence of searchElement found.
+```wing
+lastIndexOf(searchElement: <T>): num
+```
+
+Get the value at the given index, returning nil if the index is out of bounds.
+```wing
+tryAt(index: num): <T>
+```
+
+The length of the array.
+```wing
+length: num;
+```
+ 
+##A list of methods of a Mutable Array.
+
+Get the value at the given index.
+```wing
+at(index: num): <T>
+```
+
+Merge arr to the end of this array.
+```wing
+concat(arr: MutArray): MutArray
+```
+
+Checks if this array includes searchElement.
+```wing
+contains(searchElement: <T>): bool
+```
+
+Create an immutable shallow copy of this array.
+```wing
+copy(): Array
+```
+
+Returns the index of the first occurrence of searchElement found.
+```wing
+indexOf(searchElement: <T>): num
+```
+
+Inserts a new value at the given index of an array.
+```wing
+insert(index: num, value: <T>): void
+```
+
+Returns a new string containing the concatenated values in this array, separated by commas or a specified separator string.
+If the array has only
+one item, then that item will be returned without using the separator.
+```wing
+join(separator?: str): str
+```
+
+Returns the index of the last occurrence of searchElement found.
+```wing
+lastIndexOf(searchElement: <T>): num
+```
+
+Remove value from end of array.
+```wing
+pop(): <T>
+```
+
+Removes value from the given index of an array.
+```wing
+popAt(index: num): <T>
+```
+
+Add values to end of array.
+```wing
+push(...values: Array<<T>>): void
+```
+
+Removes first occurrence of a given value in an array.
+```wing
+removeFirst(value: <T>): bool
+```
+
+Sets a new value at the given index of an array.
+```wing
+set(index: num, value: <T>): void
+```
+
+---
+title: bool
+id: bool
+---
+
+Boolean.
+
+Parse a boolean from Json.
+```wing
+bool.fromJson(json: Json, options?: JsonValidationOptions);
+```
+
+---
+title: datetime
+id: datetime
+---
+
+Represents a local or UTC date object.
+
+Returns ISO-8601 string.
+```wing
+toIso(): str
+```
+
+Returns a Datetime represents the same date in utc.
+```wing
+toUtc(): datetime
+```
+
+Create a Datetime from Datetime components.
+```wing
+datetime.fromComponents(c: DatetimeComponents);
+```
+
+Create a Datetime from a JavaScript Date object.
+```wing
+datetime.fromDate(date: datetime);
+```
+
+Create a Datetime from an ISO-8601 string.
+```wing
+datetime.fromIso(iso: str);
+```
+
+Create a Datetime from local system timezone.
+```wing
+datetime.systemNow();
+```
+
+Create a Datetime from UTC timezone.
+```wing
+datetime.utcNow();
+```
+
+Here is an example for tests for the Datetime class:
+
+```wing
+bring cloud;
+bring util;
+bring math;
+
+// check that dates in different timezones are comparable
+let d1 = datetime.systemNow();
+let d2 = d1.toUtc();
+assert(d1.timestampMs == d2.timestampMs);
+
+// create a date from an ISO timestamp
+let d3 = datetime.fromIso("2023-07-18T20:18:25.177+03:00");
+
+assert(d3.timestampMs == 1689700705177);
+assert(d3.hours == 17);
+assert(d3.min == 18);
+assert(d3.sec == 25);
+assert(d3.ms == 177);
+assert(d3.dayOfMonth == 18);
+assert(d3.dayOfWeek == 2);
+assert(d3.month == 6);
+assert(d3.year == 2023);
+
+// create a date from components
+let d4 = datetime.fromComponents(year: 2023, month: 6, day: 18, hour: 19, min: 18, sec: 25, ms: 177, tz: -120);
+
+assert(d4.timezone == -120);
+assert(d4.timestampMs == 1689700705177);
+assert(d4.hours == 19);
+assert(d4.min == 18);
+assert(d4.sec == 25);
+assert(d4.ms == 177);
+assert(d4.dayOfMonth == 18);
+assert(d4.dayOfWeek == 2);
+assert(d4.month == 6);
+assert(d4.year == 2023);
+
+assert(d4.toUtc().hours == (d4.hours + (d4.timezone / 60)));
+
+test "inflight datetime" {
+  // check that dates in different timezones are comparable
+  let d5 = datetime.systemNow();
+  let d6 = d5.toUtc();
+  assert(d5.timestampMs == d6.timestampMs);
+
+  let d7 = datetime.fromIso("2023-07-18T20:18:25.177-03:00");
+  let d8 = datetime.fromComponents(year: 2023, month: 6, day: 18, hour: 20, min: 18, sec: 25, ms: 177, tz: 180);  // UTC-3:00
+
+  assert(d7.timestampMs == 1689722305177);
+  assert(d7.hours == 23);
+  assert(d7.min == 18);
+  assert(d7.sec == 25);
+  assert(d7.ms == 177);
+  assert(d7.dayOfMonth == 18);
+  assert(d7.dayOfWeek == 2);
+  assert(d7.month == 6);
+  assert(d7.year == 2023);
+  assert(d8.hours == 20);
+
+  // check that timezone conversions work
+  assert(math.floor(d7.timestamp) == math.floor(d8.timestamp));
+  assert(d4.toUtc().hours == (d4.hours + (d4.timezone / 60)));
+  assert(d8.toUtc().hours == (d8.hours + (d8.timezone / 60)));
+
+  // check that systemNow doesn't return a fixed value
+  let beforeSleep = datetime.systemNow();
+  util.sleep(1s);
+  let afterSleep = datetime.systemNow();
+  assert(afterSleep.timestampMs - beforeSleep.timestampMs > 0);
+}
+```
+
+---
+title: json
+id: json
+---
+
+Immutable Json.
+
+Convert Json element to boolean if possible.
+```wing
+asBool(): bool
+```
+
+Convert Json element to number if possible.
+```wing
+asNum(): num
+```
+
+Convert Json element to string if possible.
+```wing
+asStr(): str
+```
+
+Returns the value associated with the specified Json key.
+```wing
+get(key: str): Json
+```
+
+Returns a specified element at a given index from Json Array.
+```wing
+getAt(index: num): Json
+```
+
+Convert Json element to boolean if possible.
+```wing
+tryAsBool(): bool
+```
+
+Convert Json element to number if possible.
+```wing
+tryAsNum(): num
+```
+
+Convert Json element to string if possible.
+```wing
+tryAsStr(): str
+```
+
+Optionally returns an specified element from the Json.
+```wing
+tryGet(key: str): Json
+```
+
+Optionally returns a specified element at a given index from Json Array.
+```wing
+tryGetAt(index: num): Json
+```
+
+Creates an immutable deep copy of the Json.
+```wing
+Json.deepCopy(json: MutJson);
+```
+
+Creates a mutable deep copy of the Json.
+```wing
+Json.deepCopyMut(json: Json);
+```
+
+Deletes a key in a given Json.
+```wing
+Json.delete(json: MutJson, key: str);
+```
+
+Returns the entries from the Json.
+```wing
+Json.entries(json: Json);
+```
+
+Checks if a Json object has a given key.
+```wing
+Json.has(json: Json, key: str);
+```
+
+Returns the keys from the Json.
+```wing
+Json.keys(json: any);
+```
+
+Parse a string into a Json.
+```wing
+Json.parse(str: str);
+```
+
+Formats Json as string.
+```wing
+Json.stringify(json: any, options?: JsonStringifyOptions);
+```
+
+Try to parse a string into a Json.
+```wing
+Json.tryParse(str?: str);
+```
+
+Returns the values from the Json.
+```wing
+Json.values(json: Json);
+```
+
+##Json schema:
+
+```wing
+// Initializing a new Json Schema.
+let mySchema = new JsonSchema(schema: Json);
+
+// Retrieve the json schema as a string.
+mySchema.asStr();  
+
+// Attempt to validate a json object against the schema.
+validate(obj: Json, options?: JsonValidationOptions): void
+```
+
+##Mutable Json.
+
+Convert Json element to boolean if possible.
+```wing
+asBool(): bool
+```
+
+Convert Json element to number if possible.
+```wing
+asNum(): num
+```
+
+Convert Json element to string if possible.
+```wing
+asStr(): str
+```
+
+Returns the value associated with the specified Json key.
+```wing
+get(key: str): MutJson
+```
+
+Returns a specified element at a given index from MutJson Array.
+```wing
+getAt(index: num): MutJson
+```
+
+Adds or updates an element in MutJson with a specific key and value.
+```wing
+set(key: str, value: MutJson): void
+```
+
+Set element in MutJson Array with a specific key and value.
+```wing
+setAt(index: num, value: MutJson): void
+```
+
+Convert Json element to boolean if possible.
+```wing
+tryAsBool(): bool
+```
+
+Convert Json element to number if possible.
+```wing
+tryAsNum(): num
+```
+
+Convert Json element to string if possible.
+```wing
+tryAsStr(): str
+```
+
+Optionally returns an specified element from the Json.
+```wing
+tryGet(key: str): MutJson
+```
+
+
+Optionally returns a specified element at a given index from Json Array.
+```wing
+tryGetAt(index: num): MutJson
+```
+
+Initialization of a JsonEntry:
+```wing
+let JsonEntry = JsonEntry{ ... };
+```
+
+
+
+
+
+## Immutable Map Methods
+
+Create a mutable shallow copy of this map.
+```wing
+copyMut(): MutMap
+```
+
+Returns a specified element from the map.
+```wing
+get(key: str): <T>
+```
+
+Returns a boolean indicating whether an element with the specified key exists or not.
+```wing
+has(key: str): bool
+```
+
+Returns the keys of this map.
+```wing
+keys(): MutArray<str>
+```
+
+Returns the number of elements in the map.
+```wing
+size(): num
+```
+
+Optionally returns a specified element from the map.
+```wing
+tryGet(key: str): <T>
+```
+
+Returns the values of this map.
+```wing
+values(): Array
+```
+
+## Mutable Map Methods
+
+Removes all elements.
+```wing
+clear(): void
+```
+
+Create an immutable shallow copy of this map.
+```wing
+copy(): Map
+```
+
+Removes the specified element from a map.
+```wing
+delete(key: str): bool
+```
+
+Returns a specified element from the map.
+```wing
+get(key: str): <T>
+```
+
+Returns a boolean indicating whether an element with the specified key exists or not.
+```wing
+has(key: str): bool
+```
+
+Returns the keys of this map.
+```wing
+keys(): MutArray<str>
+```
+
+Adds or updates an entry in a Map object with a specified key and a value.
+```wing
+set(key: str, value: <T>): void
+```
+
+Returns the number of elements in the map.
+```wing
+size(): num
+```
+
+Optionally returns a specified element from the map.
+```wing
+tryGet(key: str): <T>
+```
+
+Returns the values of this map.
+```wing
+values(): Array
+```
+
+
+##A list of static functions to create Durations:
+
+Create a Duration representing an amount of days.
+```wing
+duration.fromDays(amount: num);
+```
+
+Create a Duration representing an amount of hours.
+```wing
+duration.fromHours(amount: num);
+```
+
+Create a Duration representing an amount of milliseconds.
+```wing
+duration.fromMilliseconds(amount: num);
+```
+
+Create a Duration representing an amount of minutes.
+```wing
+duration.fromMinutes(amount: num);
+```
+
+Create a Duration representing an amount of months.
+```wing
+duration.fromMonths(amount: num);
+```
+
+Create a Duration representing an amount of seconds.
+```wing
+duration.fromSeconds(amount: num);
+```
+
+Create a Duration representing an amount of years.
+```wing
+duration.fromYears(amount: num);
+```
+
+## Properties of Duration.
+
+Return the total number of days in this Duration.
+```wing
+days: num;
+```
+
+Return the total number of hours in this Duration.
+```wing
+hours: num;
+```
+
+Return the total number of milliseconds in this Duration.
+```wing
+milliseconds: num;
+```
+
+Return the total number of minutes in this Duration.
+```wing
+minutes: num;
+```
+
+Return the total number of months in this Duration.
+```wing
+months: num;
+```
+
+Return the total number of seconds in this Duration.
+```wing
+seconds: num;
+```
+
+Return the total number of years in this Duration.
+```wing
+years: num;
+```
+
+
+Number:
+
+```
+## Static Functions for Number
+
+Parse a number from JSON.
+```wing
+num.fromJson(json: Json, options?: JsonValidationOptions);
+```
+
+Parse a number from a string.
+```wing
+num.fromStr(str: str);
+```
+
+
+## Mutable Set Methods
+
+Add value to the set.
+```wing
+add(value: <T>): MutSet
+```
+
+Removes all elements from a set.
+```wing
+clear(): void
+```
+
+Create an immutable shallow copy of this set.
+```wing
+copy(): Set
+```
+
+Removes a specified value from a set, if it is in the set.
+```wing
+delete(value: <T>): bool
+```
+
+Returns a boolean indicating whether an element with the specified value exists in the set.
+```wing
+has(value: <T>): bool
+```
+
+Create an immutable array shallow copy of this set.
+```wing
+toArray(): Array
+```
+
+The length of the set.
+```wing
+size: num;
+```
+
+## Immutable Set Methods
+
+Create a mutable shallow copy of this set.
+```wing
+copyMut(): MutSet
+```
+
+Returns a boolean indicating whether an element with the specified value exists in the set.
+```wing
+has(value: <T>): bool
+```
+
+Create an immutable array shallow copy of this set.
+```wing
+toArray(): Array
+```
+
+The length of the set.
+```wing
+size: num;
+```
+
+
+## String Methods
+
+Returns the character at the specified index.
+```wing
+at(index: num): str
+```
+
+Combines the text of two or more strings and returns a new string.
+```wing
+concat(strN: str): str
+```
+
+Checks if string includes substring.
+```wing
+contains(searchString: str): bool
+```
+
+Does this string end with the given searchString?
+```wing
+endsWith(searchString: str): bool
+```
+
+Returns the index of the first occurrence of searchString found.
+```wing
+indexOf(searchString: str): num
+```
+
+Returns this string in lower case.
+```wing
+lowercase(): str
+```
+
+Replaces the first occurrence of a substring within a string.
+```wing
+replace(searchString: str, replaceString: str): str
+```
+
+Replaces all occurrences of a substring within a string.
+```wing
+replaceAll(searchString: str, replaceString: str): str
+```
+
+Splits string by separator.
+```wing
+split(separator: str): MutArray<str>
+```
+
+Does this string start with the given searchString?
+```wing
+startsWith(searchString: str): bool
+```
+
+Returns a string between indexStart, indexEnd.
+```wing
+substring(indexStart: num, indexEnd?: num): str
+```
+
+Removes white spaces from start and end of this string.
+```wing
+trim(): str
+```
+
+Returns this string in upper case.
+```wing
+uppercase(): str
+```
+
+## Static Functions for String
+
+Parse string from Json.
+```wing
+str.fromJson(json: Json, options?: JsonValidationOptions);
+```
+
+## Properties of String
+
+The length of the string.
+```wing
+length: num;
+```
+
+Struct:
+
+## Shared Behavior for All Structs - Static Functions
+
+Converts a Json to a Struct.
+```wing
+Struct.fromJson(json: Json, options?: JsonValidationOptions);
+```
+
+Parse a Json string into a Struct.
+```wing
+Struct.parseJson(json: str);
+```
+
+Retrieve the schema for this struct.
+```wing
+Struct.schema();
+```
+
+Converts a Json to a Struct, returning nil if the Json is not valid.
+```wing
+Struct.tryFromJson(json: Json);
+```
+
+Parse a Json string into a Struct, returning nil if the Json is not valid.
+```wing
+Struct.tryParseJson(json?: str);
+```
+

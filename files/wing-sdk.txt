@@ -1,0 +1,1347 @@
+---
+title: React App
+id: react-app
+description: A built-in resource for creating deployable websites using the React framework.
+keywords: [Website, React, deployment, build]
+sidebar_position: 1
+---
+
+The `ex.ReactApp` resource represents a website, built using React, that can be both hosted in the cloud or to run on a development hot-reload server in the sim target.
+
+## Usage
+
+### Initialization
+
+Using the default arguments:
+
+```ts
+bring ex;
+bring util;
+
+let website = new ex.ReactApp(projectPath: "./client");
+```
+
+or customizing them:
+
+```ts
+bring ex;
+bring util;
+
+let website = new ex.ReactApp(
+  projectPath: "./client",
+  useBuildCommand: true // `false` by default. Will run the build command if true, and the start command if not
+  buildDir: "/dist" // default is "/build"
+  startCommand: "pnpm start" // default is "npm start"
+  buildCommand: "pnpm build" // default is "npm build"
+  localPort: 4000 // default is 3001
+ );
+```
+
+When `ReactApp` is compiled to the `sim` target, by default it runs the start command (default: `npm start`) inside `projectPath` to serve your app in development mode on a local port.
+
+If the `useBuildCommand` environment variable is set OR if `ReactApp` is compiled to any other target, it will run the build command (default: `npm build`) inside of the `projectPath` to build the React app for production to `buildDir` and serve the app.
+
+### Using Wing variables within react code
+
+`ex.ReactApp` allows you to pass preflight string values from Wing to the React app using `addEnvironment` method:
+
+```ts
+bring cloud;
+bring util;
+bring ex;
+
+let api = new cloud.Api();
+let website = new ex.ReactApp(projectPath: "./client");
+
+website.addEnvironment("apiUrl", api.url);
+website.addEnvironment("another", "some string variable");
+
+```
+
+Then in the React app use `window.wingEnv`:
+(accessible after adding `<script src="./wing.js"></script>` to the index file)
+
+```ts
+const { apiUrl } = window.wingEnv;
+const users = await fetch(apiUrl + "/users");
+```
+
+Currently, we can only pass preflight string variables to the React app environment.
+
+---
+title: Api
+id: api
+description: A built-in resource for creating HTTP endpoints in the cloud.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    APIs,
+    Endpoints,
+    HTTP endpoint,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Api` resource represents a collection of HTTP endpoints that can be invoked by clients over the internet.
+APIs often serve as the front door for applications to access data, business logic, or functionality from your backend services.
+
+The `Api` resource models an endpoint as a collection of routes, each mapped to an event handler function.
+A route is a combination of a path, like `"/users/:userid"` and a set of HTTP methods, like `GET`, `POST`, or `DELETE`.
+When a client invokes a route, the corresponding event handler function executes.
+
+## Usage
+
+### REST API
+
+The following example shows a complete REST API implementation using `cloud.Api`, `ex.Table` & `cloud.Counter`
+
+```ts playground
+bring cloud;
+bring ex;
+
+let api = new cloud.Api();
+// Used for generating unique id
+let counter = new cloud.Counter();
+// our employee database
+let db = new ex.Table(
+  name: "employees",
+  primaryKey: "id",
+  columns: {
+    "name" => ex.ColumnType.STRING
+  }
+);
+
+api.get("/employees", inflight (request: cloud.ApiRequest): cloud.ApiResponse => {
+  let result = MutJson [];
+  let var i = 0;
+  for employee in db.list() {
+    result.setAt(i, employee);
+    i = i + 1;
+  }
+  return cloud.ApiResponse {
+    status: 200,
+    body: Json.stringify(result)
+  };
+});
+
+
+api.get("/employees/:id", inflight (request: cloud.ApiRequest): cloud.ApiResponse => {
+  let employee = db.get(request.vars.get("id"));
+  return cloud.ApiResponse {
+    status: 200,
+    body: Json.stringify(employee)
+  };
+});
+
+api.post("/employees", inflight (request: cloud.ApiRequest): cloud.ApiResponse => {
+   if let body = request.body {
+    let employeeData = Json.parse(body);
+    let id = "{counter.inc()}";
+    db.insert(id, employeeData);
+    return cloud.ApiResponse {
+      status: 201,
+      body: id
+    };
+   }
+});
+
+api.put("/employees/:id", inflight (request: cloud.ApiRequest): cloud.ApiResponse => {
+  if let body = request.body {
+    let employeeData = Json.parse(body);
+    let id = request.vars.get("id");
+    db.update(id, employeeData);
+    return cloud.ApiResponse {
+      status: 200,
+      body: Json.stringify(employeeData)
+    };
+  }
+});
+
+api.delete("/employees/:id", inflight (request: cloud.ApiRequest): cloud.ApiResponse => {
+  let id = request.vars.get("id");
+  db.delete(id);
+  return cloud.ApiResponse {
+    status: 204
+  };
+});
+```
+
+---
+title: Bucket
+id: bucket
+description: A built-in resource for handling object storage in the cloud.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Object storage,
+    Buckets,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Bucket` resource represents a container for storing data in the cloud.
+
+Buckets are a common way to store arbitrary files (images, videos, etc.), but can also be used to store structured data like JSON or CSV files.
+
+Buckets in the cloud use object storage, which is optimized for storing large amounts of data with high availability.
+Unlike other kinds of storage like file storage, data is not stored in a hierarchical structure, but rather as a flat list of objects, each associated with a key.
+
+## Usage
+
+### Defining a bucket
+
+```js
+bring cloud;
+
+let bucket = new cloud.Bucket(
+  public: true, // optional, defaults to `false`
+);
+```
+
+### Populating objects during deployment
+
+If you have static data that you want to upload to the bucket each time your app is deployed, you can call the preflight method `addObject`:
+
+```js
+bring cloud;
+
+let bucket = new cloud.Bucket();
+
+bucket.addObject("my-file.txt", "Hello, world!");
+```
+
+### Using a bucket inflight
+
+```js playground
+bring cloud;
+
+let bucket = new cloud.Bucket();
+
+let bucketFunc = inflight () => {
+  bucket.put("file.txt", "Hello, world!");
+  bucket.putJson("person.json", Json { name: "Alice" });
+
+  let fileData = bucket.get("file.txt");
+  assert(fileData == "Hello, world!");
+
+  let jsonData = bucket.getJson("person.json");
+  assert(jsonData.get("name") == "Alice");
+
+  let keys = bucket.list();
+  assert(keys.at(0) == "file.txt");
+  assert(keys.at(1) == "person.json");
+
+  bucket.delete("file.txt");
+};
+
+new cloud.Function(bucketFunc);
+```
+
+### Run code on bucket events
+
+You can use the preflight methods `onCreate`, `onUpdate`, and `onDelete` to define code that should run when an object is uploaded, updated, or removed from the bucket.
+Use the `onEvent` method for responding to any event.
+
+Each method creates a new `cloud.Function` resource which will be triggered by the given event type.
+
+```js playground
+bring cloud;
+
+let store = new cloud.Bucket();
+let copies = new cloud.Bucket() as "Backup";
+
+store.onCreate(inflight (key: str) => {
+  let data = store.get(key);
+  if !key.endsWith(".log") {
+    copies.put(key, data);
+  }
+});
+
+store.onDelete(inflight (key: str) => {
+  copies.delete(key);
+  log("Deleted {key}");
+});
+```
+
+---
+title: Counter
+id: counter
+description: A built-in resource for representing an container for numbers in the cloud.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Counter,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Counter` resource represents a stateful container for one or more numbers in the cloud.
+
+## Usage
+
+### Defining a counter
+
+```js
+bring cloud;
+
+let counter = new cloud.Counter(
+  initial: 123, // optional, defaults to 0
+);
+```
+
+### Using a counter inflight
+
+```js playground
+bring cloud;
+
+let counter = new cloud.Counter();
+
+let counterFunc = inflight () => {
+  let prev = counter.inc(); // increment by 1 and return previous value
+  counter.inc(5); // increment by 5
+  counter.dec(); // decrement by 1
+  counter.dec(2); // decrement by 2
+
+  assert(counter.peek() == 3); // check the current value
+
+  counter.set(100); // set to a specific value
+};
+
+new cloud.Function(counterFunc);
+```
+
+### Using keys to manage multiple counter values
+
+```js playground
+bring cloud;
+
+let counter = new cloud.Counter(initial: 100);
+
+let counterFunc = inflight () => {
+  let k1 = "key-1";
+  let k2 = "key-2";
+
+  counter.dec(1, k1); // decrement k1 by 1
+  counter.inc(11, k2); // increment k2 by 11
+
+  assert(counter.peek(k1) == 99); // check the current value of k1
+  assert(counter.peek(k2) == 111); // check the current value of k2
+};
+
+new cloud.Function(counterFunc);
+```
+
+---
+title: Domain
+id: domain
+description: A built-in resource for representing a domain in the cloud.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Domain,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Domain` resource represents a domain configuration in the cloud.
+
+## Usage
+
+### Defining a domain
+
+```js
+bring cloud;
+
+let domain = new cloud.Domain(
+  domain: "www.example.com",
+);
+
+new cloud.Website(path: "./site", domain: domain);
+```
+
+---
+title: Endpoint
+id: endpoint
+description: A resource that represents an endpoint.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Endpoint,
+    URL,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Endpoint` represents a publicly accessible endpoint and outputs it as part of the compilation target.
+
+## Usage
+
+```ts playground
+bring cloud;
+
+let endpoint = new cloud.Endpoint("https://example.com");
+```
+
+---
+title: Function
+id: function
+description: A built-in resource for creating serverless functions.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Serverless function,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Function` resource represents a serverless function for performing short, stateless tasks.
+Functions are typically used to run business logic in response to events, such as a file being uploaded to a bucket, a message being pushed to a queue, or a timer expiring.
+
+When a function is invoked on a cloud provider, it is typically executed in a container/host which is provisioned on demand.
+
+Functions may be invoked more than once, and some cloud providers may automatically retry failed invocations.
+For performance reasons, most cloud providers impose a timeout on functions, after which the function is automatically terminated.
+
+## Usage
+
+A function can be invoked in two ways:
+
+* **invoke()** - Executes the function with a payload and waits for the result.
+* **invokeAsync()** - Kicks off the execution of the function with a payload and returns immediately while the function is running.
+
+```ts playground
+bring cloud;
+bring util;
+
+// defining a cloud.Function resource
+let countWords = new cloud.Function(inflight (s: str): str => {
+  return "${s.split(" ").length}";
+}) as "countWords";
+
+let longTask = new cloud.Function(inflight () => {
+  util.sleep(30s);
+  log("done!");
+});
+
+new cloud.Function(inflight () => {
+  let sentence = "I am a sentence with 7 words";
+  // invoking cloud.Function from inflight context
+  let wordsCount = countWords.invoke(sentence);
+  log("'${sentence}' has ${wordsCount} words");
+
+  longTask.invokeAsync("");
+  log("task started");
+}) as "Invoke Me";
+```
+
+## Function container reuse
+
+Most cloud providers will opportunistically reuse the function's container in additional invocations. It is possible
+to leverage this behavior to cache objects across function executions using `inflight new` and inflight fields.
+
+The following example reads the `bigdata.json` file once and reuses it every time `query()` is called.
+
+```js
+bring cloud;
+
+let big = new cloud.Bucket();
+
+big.addObject("bigdata.json", Json.stringify({
+  "my-key": "my-value"
+}));
+
+class MyDatabase {
+  inflight bigdata: Json;
+  inflight new() {
+    // download big data once
+    this.bigdata = big.getJson("bigdata.json");
+  }
+
+  pub inflight query(key: str): Json {
+    return this.bigdata.get(key);
+  }
+}
+
+let db = new MyDatabase();
+
+new cloud.Function(inflight () => {
+  log(Json.stringify(db.query("my-key")));
+});
+```
+
+The AWS implementation of `cloud.Function` uses [AWS Lambda](https://aws.amazon.com/lambda/).
+
+To add extra IAM permissions to the function, you can use the `aws.Function` class as shown below.
+
+```ts playground
+bring aws;
+bring cloud;
+
+let f = new cloud.Function(inflight () => {
+  log("Hello world!");
+});
+if let lambdaFn = aws.Function.from(f) {
+  lambdaFn.addPolicyStatements(
+    aws.PolicyStatement {
+      actions: ["ses:sendEmail"],
+      effect: aws.Effect.ALLOW,
+      resources: ["*"],
+    },
+  );
+}
+```
+
+---
+title: OnDeploy
+id: on-deploy
+description: A resource that runs inflight code during the application's deployment.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    OnDeploy,
+    Trigger,
+    Deployment,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.OnDeploy` resource runs a block of inflight code each time the application is deployed.
+
+## Usage
+
+```ts playground
+bring cloud;
+
+let bucket = new cloud.Bucket();
+
+// each time the application is deployed, all objects in the bucket are deleted
+let setup = new cloud.OnDeploy(inflight () => {
+  for key in bucket.list() {
+    bucket.delete(key);
+  }
+});
+```
+
+To specify that the `cloud.OnDeploy` resource should be run before or after another resource is created or updated, use the `executeBefore` or `executeAfter` properties:
+
+```ts playground
+bring cloud;
+
+let counter = new cloud.Counter();
+
+let setup2 = new cloud.OnDeploy(inflight () => {
+  counter.inc();
+}) as "setup2";
+let setup1 = new cloud.OnDeploy(inflight () => {
+  counter.set(10);
+}, executeBefore: [setup2]) as "setup1";
+```
+
+---
+title: Queue
+id: queue
+description: A built-in resource for creating distributed queues - a data structure for storing messages.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Queue,
+    Distributed queue,
+    Messaging queue,
+    FIFO queue,
+    Channel,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Queue` resource represents a data structure for holding a list of messages.
+Queues are typically used to decouple producers of data and the consumers of said data in distributed systems.
+Queues by default are not FIFO (first in, first out) - so the order of messages is not guaranteed.
+
+## Usage
+
+### Setting a Queue Consumer
+
+```ts playground
+bring cloud;
+
+let q = new cloud.Queue();
+
+q.setConsumer(inflight (m: str) => {
+  log("message ${m} consumed");
+});
+
+new cloud.Function(inflight () => {
+  q.push("message a");
+  q.push("message b");
+});
+```
+
+### Using Queue inflight api
+
+Pusing messages, popping them, and purge
+
+```ts playground
+bring cloud;
+
+let q = new cloud.Queue();
+
+new cloud.Function(inflight () => {
+  q.push("message a");
+  q.push("message b", "message c", "message d");
+  log("approxSize is ${q.approxSize()}");
+  log("popping message ${q.pop()}");
+  log("popping message ${q.pop()}");
+  log("approxSize is ${q.approxSize()}");
+  q.purge();
+  log("approxSize is ${q.approxSize()}");
+});
+```
+
+---
+title: Schedule
+id: schedule
+description: A built-in resource for defining scheduled tasks.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Schedule,
+    Cron job,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Schedule` resource is used to trigger events at a regular interval.
+Schedules are useful for periodic tasks, such as running backups or sending daily reports.
+The timezone used in cron expressions is always UTC.
+
+## Usage
+
+### From cron
+
+```ts playground
+bring cloud;
+
+let schedule = new cloud.Schedule(cron: "* * * * ?");
+
+schedule.onTick(inflight () => {
+  log("schedule: triggered");
+});
+```
+
+### From rate
+
+```ts playground
+bring cloud;
+
+let schedule = new cloud.Schedule(rate: 1m);
+
+schedule.onTick(inflight () => {
+  log("schedule: triggered");
+});
+```
+
+---
+title: Secret
+id: secret
+description: A built-in resource for securely storing secrets in the cloud.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    secrets,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Secret` class represents a secret value (like an API key, certificate, etc.) that is securely stored in the cloud.
+
+Secrets are encrypted at rest and in transit, and are only decrypted when they are used in a task.
+Storing a secret allows you to use the value in different compute tasks while only having to rotate or revoke it in one place.
+
+## Usage
+
+### Defining a secret
+
+```js
+bring cloud;
+
+let secret = new cloud.Secret(
+  name: "my-secret", // optional, defaults to a generated name
+);
+```
+
+Before deploying your application, you will be expected to store the secret value in a secure place according to the target-specific instructions below.
+
+### Retrieving secret values
+
+```js
+bring cloud;
+
+let secret = new cloud.Secret(
+  name: "my-api-key",
+);
+
+new cloud.Function(inflight () => {
+  let secretValue = secret.value(); // retrieve the secret as a `str` value
+  let secretValueAsJson = secret.valueJson(); // retrieve the secret as a `Json` value
+});
+
+---
+title: Service
+id: service
+description: A built-in resource for publishing messages to subscribers.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    services,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Service` class represents a cloud service that has a start and optional stop lifecycle.
+
+Services are a common way to define long running code, such as microservices.
+
+## Usage
+
+### Creating a service
+
+When defining a service, the first argument is an inflight closure that represents
+the service handler. This handler is responsible to perform any initialization
+activity and **return asynchronously** when initialization is complete.
+
+```js
+bring cloud;
+
+new cloud.Service(inflight () => {
+  // ...
+  // kick off any initialization activities asynchronously
+  // ...
+  log("Service started...");
+});
+```
+
+### Disable auto-start
+
+By default the service resource will start automatically, however this can be disabled by passing
+`autoStart: false` to the constructor.
+
+```js
+bring cloud;
+
+let handler = inflight () => {
+  log("service started...");
+};
+
+let service = new cloud.Service(handler, autoStart: false);
+```
+
+### Service cleanup
+
+Optionally, the service handler inflight closure can return another inflight closure which will be
+called when the service is stopped. Using a return closure allows naturally passing context between
+the async calls.
+
+```js
+bring cloud;
+
+new cloud.Service(inflight() => {
+  let server = startHttpServer();
+  log("Service started...");
+  return () => {
+    log("Service stopped...");
+    server.close();
+  };
+});
+```
+
+### Stopping and starting a service
+
+The inflight methods `start()` and `stop()` are used exactly how they sound, to stop and start the
+service. The method `started()` returns a `bool` indicating if the service is currently started.
+
+Here is an example of using a service that will track how often it is started and stopped using
+counters. 
+
+An important aspect to note is that consecutive starts and stops have no affect on a service. For
+example, if a `service.start()` is called on a service that is already started, nothing will happen.
+
+```js
+bring cloud;
+
+let startCounter = new cloud.Counter() as "start counter";
+let stopCounter = new cloud.Counter() as "stop counter";
+
+let handler = inflight() => {
+  let i = startCounter.inc();
+  log("Service started for the ${i}th time...");
+  return () => {
+    let i = stopCounter.inc();
+    log("Service stopped for the ${i}th time...");
+  };
+};
+
+let service = new cloud.Service(handler, autoStart: false);
+
+// Functions to stop and start the service
+new cloud.Function(inflight() => {
+  service.start();
+  assert(service.started());
+}) as "start service";
+
+new cloud.Function(inflight() => {
+  service.stop();
+  assert(!service.started());
+}) as "stop service";
+```
+
+---
+title: Topic
+id: topic
+description: A built-in resource for publishing messages to subscribers.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    topics,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Topic` class represents a subject of data that is open for subscription.
+
+Topics are a staple of event-driven architectures, especially those that rely on pub-sub messaging to decouple producers of data and the consumers of said data.
+
+## Usage
+
+### Creating a topic
+
+```js
+bring cloud;
+
+let topic = new cloud.Topic();
+```
+
+### Subscribing to a topic
+
+```js
+bring cloud;
+
+let topic = new cloud.Topic();
+
+topic.onMessage(inflight (message: str) => {
+  log("Topic published message: {message}");
+});
+```
+
+### Publishing to a topic
+
+The inflight method `publish` sends a message to all of the topic's subscribers.
+
+```js
+bring cloud;
+
+let topic = new cloud.Topic();
+
+inflight () => {
+  topic.publish("Hello World!");
+};
+```
+
+### Simple pub-sub example
+
+Here is an example of combining the preflight and inflight apis for a topic and creating an adorable
+simple pub-sub application.
+
+```js
+bring cloud;
+
+// First we create a topic
+let topic = new cloud.Topic();
+
+// Then we define a consumer inflight handler
+let consumerHandler = inflight(message: str) => {
+  log("Doing some work with message: {message}");
+};
+
+// Now we can use a preflight method of topic to register the consumer handler
+// to be invoked when a message is published to the topic.
+topic.onMessage(consumerHandler);
+
+// Then we define the producer inflight handler
+let publisherHandler = inflight () => {
+  // Here we use the inflight api to publish a message to the topic.
+  topic.publish("Here are those launch codes you asked for.");
+};
+
+// Finally we can use multiple resources to invoke our publisher handler
+// for simplicity sake we will just use a function.
+new cloud.Function(publisherHandler);
+```
+
+---
+title: Website
+id: website
+description: A built-in resource for creating static websites.
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Schedule,
+    Cron job,
+  ]
+sidebar_position: 1
+---
+
+The `cloud.Website` resource represents a static website that can be hosted in the cloud.
+Websites are typically used to serve static content, such as HTML, CSS, and JavaScript files, which are updated whenever the application is redeployed.
+
+## Usage
+
+### Website
+
+```ts
+bring cloud;
+
+let website = new cloud.Website(path: "./public");
+```
+
+Under `./public/index.html`
+
+```html
+<!DOCTYPE html>
+<html>
+  Hello Winglang!!!
+</html>
+```
+
+### Webapp
+
+An extended Web App example including static Website, API Gateway and a Redis database, can be found in this [example project](https://github.com/winglang/research/tree/main/dogfooding/where-to-eat).
+
+---
+title: Workload
+id: workload
+description: A built-in resource for handling containerized workloads
+keywords:
+  [
+    Wing reference,
+    Wing language,
+    language,
+    Wing standard library,
+    Wing programming language,
+    Kubernetes,
+    Containers,
+    Docker,
+    EKS,
+    ECS,
+    AKS
+    GKE
+  ]
+sidebar_position: 1
+---
+
+The `Workload` resource represents a scalable containerized service deployed and managed by a
+container orchestration system such as Kubernetes.
+
+When running locally within the **Wing Simulator**, either during development or during builds,
+workloads are implemented using local docker images.
+
+When running on the cloud, workloads become [Kubernetes](https://kubernetes.io/) applications, built
+and published to an image registry and deployed to a Kubernetes cluster using
+[Helm](https://helm.sh/). We currently only support AWS/EKS but support for other platforms are
+planned.
+
+It will also be possible for platforms to implement workloads using any other compatible container
+orchestration system such as [Amazon ECS](https://aws.amazon.com/ecs/), [fly.io](https://fly.io) or
+[ControlPlane](https://controlplane.com/).
+
+> :warning: This resource is still experimental. Please ping the team on [Wing
+> Slack](https://t.winglang.io/slack) if you encounter any issues or have any questions and let us
+> know what you think. See [roadmap](#roadmap) below for more details about our plans.
+
+## Installation
+
+For the time being, in order to use this resource you will first first need to install
+[@winglibs/containers](https://www.npmjs.com/package/@winglibs/containers) from npm:
+
+```sh
+npm i @winglibs/containers
+```
+
+You will also need [Docker](https://www.docker.com/) or [OrbStack](https://orbstack.dev/) installed
+on your system in order for workloads to work in the Wing Simulator.
+
+## Usage
+
+In your code, just `bring containers` and define workloads using the `containers.Workload` class.
+
+Check out a few examples below or jump to the full [API Reference](#api-reference).
+
+### Using an image from a registry
+
+Let's start with a simple example which defines a workload based on the
+[hashicorp/http-echo](https://github.com/hashicorp/http-echo) image. It is a simple HTTP server
+listening on port 5678 that responds with a message.
+
+```js
+bring containers;
+
+let hello = new containers.Workload(
+  name: "hello",
+  image: "hashicorp/http-echo",
+  port: 5678,
+  public: true,
+  args: ["-text=hello, wingnuts!"],
+);
+```
+
+In order to test this workload, we can use `publicUrl` which resolves to a publicly accessible route
+into your container. And if you were wondering: Yes, this also works on the cloud! Every workload
+with `public: true` will have a URL that can be used to access it from the web.
+
+```js
+bring http;
+bring expect;
+
+test "message is returned in http body" {
+  let url = hello.publicUrl ?? "FAIL";
+  let body = http.get(url).body ?? "FAIL";
+  log(body);
+  expect.equal(body, "hello, wingnuts!\n");
+}
+```
+
+### Building an image from source
+
+Workloads can also be be based on an image defined through a dockerfile within your project. The
+image is automatically built during compilation and published to a container registry during
+deployment.
+
+Let's define a workload which based on the docker image built from the dockerfile in the `./backend`
+directory:
+
+```js
+bring containers;
+
+new containers.Workload(
+  name: "backend",
+  image: "./backend",
+  port: 3000,
+  public: true
+);
+```
+
+Under `./backend`, create:
+
+`backend/Dockerfile`:
+
+```dockerfile
+FROM node:20.8.0-alpine
+EXPOSE 3000
+ADD index.js /app/index.js
+ENTRYPOINT [ "node", "/app/index.js" ]
+```
+
+`backend/index.js`:
+
+```js
+const http = require('http');
+
+process.on('SIGINT', () => process.exit(0));
+
+const server = http.createServer((req, res) => {
+  console.log(`request received: ${req.method} ${req.url}`);
+  res.end('Hello, Wingnuts!');
+});
+
+console.log('listening on port 3000');
+server.listen(3000);
+```
+
+### Defining multiple workloads as microservices
+
+Using `privateUrl`, it is possible to reach workloads without having to expose them publicly.
+
+Let's combine the last two examples by deploying the `http-echo` container and ping it from within
+our docker image:
+
+```js
+bring containers;
+
+let echo = new containers.Workload(
+  name: "echo",
+  image: "hashicorp/http-echo",
+  port: 5678,
+  args: ["-text=hello, wingnuts!"],
+) as "echo";
+
+let backend = new containers.Workload(
+  name: "backend",
+  image: "./backend",
+  port: 3000,
+  public: true,
+  env: {
+    ECHO_URL: echo.internalUrl
+  }
+) as "backend";
+```
+
+In `backend/index.js` file, we can access the internal URL of the `echo` workload
+through `process.env.ECHO_URL`.
+
+Check out the full microservice example
+[here](https://github.com/winglang/containers/blob/main/test/microservices.test.w).
+
+## API Reference
+
+### `name: str`
+
+This is a required option and must be a a unique name for the workload within the application. 
+
+In the `tf-aws` target, this name will be used as the name of the Helm chart and the name of all the
+resources associated with the workload in your Kubernetes cluster.
+
+### `image: str`
+
+This is another required option and can either be the name of a publicly available docker image or a
+relative path to a docker build context directory (with a Dockerfile in it).
+
+### `port: num?`
+
+* `port: num?` (optional): internal port number listening. This is required to connect to a server
+  running inside the container.
+
+### `public: bool?`
+
+If this option is enabled, this workload will be accessible from the public internet through the URL
+returned from `publicUrl`.  When disabled, the container can only be accessed by other workloads in
+the application via its `privateUrl`.
+
+When running in `sim`, the container will be accessible through a `localhost` port.
+
+When running on tf-aws (EKS), an
+[Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) resource will be defined
+for this workload and an ALB (Application Load Balancer) will be allocated. The `publicUrl` of this
+workload will contain the fully qualified host name that can be used to access the container from
+the public internet.
+
+By default, containers are only accessible from within the same application through their
+`privateUrl`.
+
+When `public` is enabled, `port` must also be set.
+
+### `readiness: str?`
+
+If this is specified, it is the URL path to send HTTP GET requests to in order to determine that the
+workload has finished initialization.
+
+When deployed to Kubernetes, this is implemented using a [readiness
+probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+By default, readiness probes are disabled.
+
+### `replicas: num?`
+
+Defines the number of container instances needed for this workload.
+
+When running in the simulator, this option is ignored and there is always a single container.
+
+When running in Kubernetes, this is implemented by setting `replicas` in the [Deployment
+resource](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) that defines this
+workload.
+
+By default this is set to 1 replica.
+
+### `sources: Array<str>?`
+
+A list of [glob patterns](https://en.wikipedia.org/wiki/Glob_(programming)) which are used to match
+the source files of the container. If any of these files change, the image is rebuilt and
+invalidated. This is only relevant if the image is built from source.
+
+By default, this is all the files under the image directory.
+
+### `args` and `env`
+
+* `args: Array<str>?` (optional): arguments to pass to the entrypoint.
+* `env: Map<str>?` (optional): environment variables.
+
+## Target-specific details
+
+### Simulator (`sim`)
+
+When executed in the Wing Simulator, the workload is started within a local Docker container.
+
+### AWS (`tf-aws`)
+
+Workloads are deployed to a Kubernetes cluster running on [Amazon EKS](https://aws.amazon.com/eks/).
+
+For each application, a Helm chart is synthesized with a
+[Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/),
+[Service](https://kubernetes.io/docs/concepts/services-networking/service/) and if the workload is
+public, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) as well.
+
+By default, a new Amazon EKS cluster will be provisioned *for each Wing application*. This might be
+okay in a situation where your cluster hosts only a single application, but it is very common to
+share a single cluster across multiple applications.
+
+#### Creating a new EKS cluster
+
+To share a single EKS cluster across multiple Wing applications, you will first need to create a
+cluster in your AWS account. If you already have a cluster, jump to [Deploying into an existing
+cluster](#deploying-into-an-existing-eks-cluster) below.
+
+To create a compatible EKS cluster manually, we recommend to use use the `tfaws.Cluster` resource:
+
+`eks.main.w`:
+
+```js
+bring containers;
+new containers.Cluster("my-wing-cluster");
+```
+
+And provision it using Terraform (this operation could take up to 20 minutes...):
+
+```sh
+wing compile -t tf-aws eks.main.w
+cd target/eks.main.tfaws
+terraform init
+terraform apply
+```
+
+To connect to our new cluster through `kubectl`, use `update-kubeconfig`:
+
+```sh
+aws eks update-kubeconfig --name my-wing-cluster
+```
+
+Then:
+
+```sh
+$ kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   172.20.0.1   <none>        443/TCP   36m
+```
+
+#### Deploying into an existing EKS cluster
+
+To deploy a workload into an the EKS cluster you just created or to an already existing cluster, you
+will need to set the following platform values (this can be done using `-v X=Y` or `--values
+values.yml`):
+
+* `eks.cluster_name`: The name of the cluster
+* `eks.endpoint`: The URL of the Kubernetes API endpoint of the cluster
+* `eks.certificate`: The certificate authority of this cluster.
+
+You can use the [eks-values.sh](https://github.com/winglang/containers/blob/main/eks-values.sh)
+script to obtain the attributes of your EKS cluster.
+
+Install:
+
+```sh
+$ curl https://raw.githubusercontent.com/winglang/containers/main/eks-values.sh > eks-values.sh
+$ chmod +x ./eks-values.sh
+```
+
+Use:
+
+```sh
+$ ./eks-values.sh CLUSTER-NAME > values.yaml
+$ wing compile -t tf-aws --values ./values.yaml main.w
+```
+
+### Azure (`tf-azure`)
+
+Not supported yet.
+
+### GCP (`tf-gcp`)
+
+Not supported yet.
+
+## Roadmap
+
+The following is a non-exhaustive list of capabilities we are looking to add to this resource:
+
+### Scaling
+
+- [ ] Constraints
+- [ ] Autoscaling
+
+### Networking
+
+- [ ] Access `cloud.*` resources from workloads (e.g. put an object in a bucket, poll a queue).
+- [ ] Access something like `Redis` from a workload (unify VPCs)
+- [ ] Access non-public workloads from `cloud.Function`
+
+### API
+
+- [ ] Allow defining workloads using inflights (`cloud.Service`)
+
+### Runtime
+
+- [ ] Logs
+- [ ] Sidecar containers
+
+### Endpoints
+
+- [ ] SSL
+- [ ] Custom domains
+
+### Platforms
+
+- [ ] ECS
+- [ ] GKE
+- [ ] AKS
+- [ ] fly.io
+- [ ] ControlPlane
+
+
