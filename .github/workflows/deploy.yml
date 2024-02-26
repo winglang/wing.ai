@@ -15,6 +15,7 @@ env:
   TF_BACKEND_BUCKET_REGION: us-east-1
   PROJECT_PATH: ./ai-endpoints
   S3_BUCKET_NAME: ai-endpoint-c85c1af5-20240226134657000700000001
+  NODE_VERSION: 20
 
 jobs:
   deploy:
@@ -33,7 +34,19 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Add .env file
-        run: echo GEMINI_API=\"${{secrets.GEMINI}}\" > ${{ env.PROJECT_PATH }}/.env
+        run: |
+          echo GEMINI_API=\"${{secrets.GEMINI}}\" > ${{ env.PROJECT_PATH }}/.env
+          cat ${{ env.PROJECT_PATH }}/.env
+
+      - name: Setup Node.js v18
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install deps
+        run: |
+          cd ${{ env.PROJECT_PATH }}
+          npm ci
 
       - name: Deploy Winglang App
         uses: winglang/wing-github-action/actions/deploy@main
@@ -46,4 +59,3 @@ jobs:
         env:
           TF_BACKEND_BUCKET: ${{env.S3_BUCKET_NAME}}
           TF_BACKEND_BUCKET_REGION: ${{ env.TF_BACKEND_BUCKET_REGION }}
-          GEMINI_API: ${{ secrets.GEMINI }}
