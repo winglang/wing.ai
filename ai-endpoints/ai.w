@@ -25,14 +25,14 @@ pub class Ai {
     if let history = this.redis.get(conversationId)  {
       nextHistory = types.HistoryList.parseJson(history).histories.copyMut();
     }
-    if code != nil {
+    if let code = code  {
       let var i: num = nextHistory.length - 1;
       while i > 0 {
         if nextHistory.at(i).role == "model" {
           nextHistory.popAt(i);
-          nextHistory.insert(i, {role: "model", parts: [{text: code!}]});
+          nextHistory.insert(i, {role: "model", parts: [{text: code}]});
           break;
-      }
+        }
       i = i+1;
       }
     }

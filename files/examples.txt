@@ -8,7 +8,7 @@ bring cloud;
 bring http;
 
 // create an api resource
-let api = new cloud.Api();
+let api = new cloud.Api() as "api endpoint";
 
 // add an endpoint 
 api.get("/", inflight () => {
@@ -681,3 +681,47 @@ let scheduleHandler = inflight () => {
 schedule.onTick(scheduleHandler);
 
 --- END OF EXAMPLE ---
+
+creating 3 lambdas with a write permissions to a bucket:
+
+```wing 
+bring cloud;
+
+let bucket = new cloud.Bucket();
+
+let handler = inflight () => {
+  bucket.put("hello", "world");
+};
+
+let l1 = new cloud.Function(handler) as "first lambda";
+let l2 = new cloud.Function(handler) as "second lambda";
+let l3 = new cloud.Function(handler) as "third lambda";
+
+--- END OF EXAMPLE ---
+
+When creating more then one resource from the same type, we need to add "as <identifier" at the end of the initialization.
+
+For example: 
+
+more than one bucket:
+
+```wing
+bring cloud;
+
+let bucket = new cloud.Bucket() as "main bucket";
+let archive = new cloud.Bucket() as "archive bucket";
+```
+
+more than one topic:
+
+```wing
+bring cloud;
+
+let messageTopic = new cloud.Bucket() as "messages";
+let notificationTopic = new cloud.Bucket() as "notifications";
+```
+
+etc...
+
+--- END OF EXAMPLE ---
+
