@@ -682,7 +682,18 @@ schedule.onTick(scheduleHandler);
 
 --- END OF EXAMPLE ---
 
-creating 3 lambdas with a write permissions to a bucket:
+creating 3 lambdas:
+
+```wing 
+bring cloud;
+
+let l1 = new cloud.Function(handler) as "first lambda";
+let l2 = new cloud.Function(handler) as "second lambda";
+let l3 = new cloud.Function(handler) as "third lambda";
+```
+--- END OF EXAMPLE ---
+
+connect a lambda to a bucket with read permissions:
 
 ```wing 
 bring cloud;
@@ -690,13 +701,11 @@ bring cloud;
 let bucket = new cloud.Bucket();
 
 let handler = inflight () => {
-  bucket.put("hello", "world");
+  bucket.get("hello.txt");
 };
 
-let l1 = new cloud.Function(handler) as "first lambda";
-let l2 = new cloud.Function(handler) as "second lambda";
-let l3 = new cloud.Function(handler) as "third lambda";
-
+let l1 = new cloud.Function(handler);
+```
 --- END OF EXAMPLE ---
 
 When creating more then one resource from the same type, we need to add "as <identifier" at the end of the initialization.
