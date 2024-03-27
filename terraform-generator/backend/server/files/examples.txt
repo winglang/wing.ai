@@ -1,0 +1,736 @@
+To build a private api gateway use this code: 
+
+on main.w write:
+
+```
+// importing libraries
+bring cloud;
+bring http;
+
+// create an api resource
+let api = new cloud.Api() as "api endpoint";
+
+// add an endpoint 
+api.get("/", inflight () => {
+  return {
+    status: 200,
+    body: "hello, from within the VPC!"
+  };
+});
+
+
+let url = api.url;
+
+// create a cloud function that sends an http request to the api gateway 
+new cloud.Function(inflight () => {
+  let res = http.get("{url}/");
+  log("status = {res.status}");
+  log("body = {res.body}");
+  return res.body;
+}) as "consumer";
+```
+
+in `wing.toml` add the following configuration:
+
+[ tf-aws ]
+vpc = "new"
+vpc_lambda = true
+vpc_api_gateway = true
+
+
+--- END OF EXAMPLE ---
+This is a simple example of a WingLang project that demonstrates the usage of cloud services. The program creates a cloud bucket and a cloud queue. It then adds a consumer to the queue, which writes a message to a file in the bucket.
+
+```
+bring cloud;
+bring util;
+bring expect;
+
+let bucket = new cloud.Bucket();
+let queue = new cloud.Queue();
+
+queue.setConsumer(inflight (message) => {
+  bucket.put("wing.txt", "Hello, {message}");
+}, timeout: 30s);
+
+test "Hello, world!" {
+  queue.push("world!");
+
+  let found = util.waitUntil(() => {
+    log("Checking if wing.txt exists");
+    return bucket.exists("wing.txt");
+  });
+
+  expect.equal(bucket.get("wing.txt"), "Hello, world!");
+}
+```
+
+--- END OF EXAMPLE ---
+This is a HTTP API example authenticating with Basic Auth. It's fairly similar to api-basic-auth, except for the middleware approach.
+
+in basic-auth.w:
+```
+bring cloud;
+bring util;
+
+pub struct Credentials {
+  username: str;
+  password: str;
+}
+
+pub class BasicAuth {
+  user: str;
+  password: str;
+
+  new(user: str?, password: str?) {
+    this.user = user ?? "admin";
+    this.password = password ?? "admin";
+  }
+
+  pub inflight call(req: cloud.ApiRequest): bool {
+    try {
+      let authHeader = this.authHeader(req.headers);
+      let credentials = this.authCredentials(authHeader);
+      let username = credentials.username;
+      let password = credentials.password;
+      return username == this.user && password == this.password;
+    } catch {
+      log("exception caught - no auth header");
+      return false;
+    }
+  }
+
+  inflight authCredentials(header: str): Credentials {
+    let auth = util.base64Decode(header.split(" ").at(1));
+    let splittedAuth = auth.split(":");
+    let username = splittedAuth.at(0);
+    let password = splittedAuth.at(1);
+
+    return Credentials {
+      username: username,
+      password: password
+    };
+  }
+  // workaround for https://github.com/winglang/wing/issues/3205
+  inflight authHeader(headers: Map<str>?): str {
+    if (this.authHeaderPresent(headers)) {
+      let authHeaderOptional = headers?.tryGet("authorization");
+      let var authHeader = headers?.tryGet("Authorization");
+
+      if (authHeader == nil) {
+        authHeader = authHeaderOptional;
+      }
+
+      // force cast to str from str?
+      return "{authHeader}";
+    } else {
+      log("headers: {Json.stringify(headers)}");
+      log("no auth header");
+      throw("no auth header");
+    }
+  }
+
+  // workaround for https://github.com/winglang/wing/issues/3205
+  inflight authHeaderPresent(headers: Map<str>?): bool {
+    if (headers?.has("authorization") == false) && (headers?.has("Authorization") == false) {
+      return false;
+    }
+    return true;
+  }
+}
+```
+
+in main.w:
+```
+bring cloud;
+bring http;
+bring util;
+bring "./basic-auth.w" as auth;
+bring expect;
+
+class Wrapper {
+  pub apiUrl: str;
+
+  new() {
+    let basicAuth = new auth.BasicAuth();
+
+    // conflicting with ../api-basic-auth/ application
+    // https://github.com/winglang/wing/issues/3224
+    let api = new cloud.Api() as "basic-auth-middleware-api";
+
+    // class based inflight functions are not yet supported
+    // see https://github.com/winglang/wing/issues/3250
+    let authenticatedMiddleware = (handler: inflight (cloud.ApiRequest): cloud.ApiResponse): inflight (cloud.ApiRequest): cloud.ApiResponse => {
+      let middleware = inflight (req: cloud.ApiRequest): cloud.ApiResponse => {
+        let authenticated = basicAuth.call(req);
+        if (!authenticated) {
+          return cloud.ApiResponse {
+            status: 401,
+            headers: {
+              "Content-Type" => "text/plain"
+            },
+            body: "Unauthorized"
+          };
+        } else {
+          return handler(req);
+        }
+      };
+
+      return middleware;
+    };
+
+    api.get("/hello-middleware", authenticatedMiddleware(inflight (request) => {
+      return {
+        status: 200,
+        headers: {
+          "Content-Type" => "text/plain"
+        },
+        body: "hello world"
+      };
+    }));
+
+    this.apiUrl = api.url;
+  }
+}
+
+// workaround for https://github.com/winglang/wing/issues/3289
+// this shouldn't be necessary, since api.url should
+// be directly accessible in the test
+let api = new Wrapper();
+
+test "not authenticated" {
+  let response = http.get("{api.apiUrl}/hello-middleware");
+  expect.equal(response.status, 401);
+}
+
+test "authenticated" {
+  let response = http.get("{api.apiUrl}/hello-middleware", {
+    headers: {
+      Accept: "application/json",
+      Authorization: "Basic " + util.base64Encode("admin:admin")
+    }
+  });
+  expect.equal(response.status, 200);
+}
+```
+
+--- END OF EXAMPLE ---
+
+This is a HTTP API example authenticating with Basic Auth. It's also making use of leveraging external Javascript - in this case for base64 en/decoding. Last but not least, it's encapsulating the Basic Authentication functionality into a dedicated class.
+
+in main.w:
+```
+bring cloud;
+bring util;
+bring http;
+bring expect;
+
+struct Credentials {
+  username: str;
+  password: str;
+}
+
+class BasicAuth {
+  user: str;
+  password: str;
+
+  new(user: str?, password: str?) {
+    this.user = user ?? "admin";
+    this.password = password ?? "admin";
+  }
+
+  pub inflight call(req: cloud.ApiRequest): bool {
+    try {
+      let authHeader = this.authHeader(req.headers);
+      let credentials = this.authCredentials(authHeader);
+      let username = credentials.username;
+      let password = credentials.password;
+      return username == this.user && password == this.password;
+    } catch e {
+      log("exception caught {e}");
+      return false;
+    }
+  }
+
+  inflight authCredentials(header: str): Credentials {
+    let auth = util.base64Decode(header.split(" ").at(1));
+    let splittedAuth = auth.split(":");
+    let username = splittedAuth.at(0);
+    let password = splittedAuth.at(1);
+
+    return Credentials {
+      username: username,
+      password: password
+    };
+  }
+  // workaround for https://github.com/winglang/wing/issues/3205
+  inflight authHeader(headers: Map<str>?): str {
+    if (this.authHeaderPresent(headers)) {
+      let authHeaderOptional = headers?.tryGet("authorization");
+      let var authHeader = headers?.tryGet("Authorization");
+
+      if (authHeader == nil) {
+        authHeader = authHeaderOptional;
+      }
+
+      // force cast to str from str?
+      return "{authHeader}";
+    } else {
+      log("headers: {Json.stringify(headers)}");
+      log("no auth header");
+      throw("no auth header");
+    }
+  }
+
+  // workaround for https://github.com/winglang/wing/issues/3205
+  inflight authHeaderPresent(headers: Map<str>?): bool {
+    if (headers?.has("authorization") == false) && (headers?.has("Authorization") == false) {
+      return false;
+    }
+    return true;
+  }
+}
+
+let auth = new BasicAuth();
+let api = new cloud.Api();
+
+api.get("/hello", inflight (req) => {
+  let authenticated = auth.call(req);
+
+  if (!authenticated) {
+    return {
+      status: 401,
+      headers: {
+        "Content-Type" => "text/plain"
+      },
+      body: "Unauthorized"
+    };
+  }
+
+  return {
+    status: 200,
+    headers: {
+      "Content-Type" => "text/plain"
+    },
+    body: "hello world"
+  };
+});
+
+// workaround for https://github.com/winglang/wing/issues/3289
+// this shouldn't be necessary, since api.url should
+// be directly accessible in the test
+let apiUrl = api.url;
+
+test "not authenticated" {
+  let response = http.get("{apiUrl}/hello");
+  expect.equal(response.status, 401);
+}
+
+test "authenticated" {
+  let response = http.get("{apiUrl}/hello", {
+    headers: {
+      Accept: "application/json",
+      Authorization: "Basic " + util.base64Encode("admin:admin")
+    }
+  });
+
+  expect.equal(response.status, 200);
+}
+```
+
+--- END OF EXAMPLE ---
+The example is using Redis from the external SDK:
+
+```
+bring cloud;
+bring ex;
+bring util;
+bring expect;
+
+let queue = new cloud.Queue();
+let redis = new ex.Redis();
+
+queue.setConsumer(inflight (message) => {
+  redis.set("hello", message);
+}, timeout: 3s);
+
+test "Hello, world!" {
+  queue.push("world!");
+  util.waitUntil(() => {
+    return redis.get("hello") != nil;
+  });
+
+  expect.equal(redis.get("hello"), "world!");
+}
+```
+
+--- END OF EXAMPLE ---
+
+This is an example for a simple stock polling application, that retrieves data from Twelve Data API, stores the latest stock price in DynamoDB and publishes the update to a SQS queue.
+It show case the capabilities of Wing to fetch data from an external API and distribute this across different systems.
+
+In main.w:
+```
+bring cloud;
+bring http;
+
+let tickerSymbol = "GME";
+
+class TwelveDataApi {
+    key: cloud.Secret;
+
+    new() {
+        this.key = new cloud.Secret(
+          name: "twelve-data-api-key"
+        );
+    }
+
+    pub inflight stockUpdates(tickerSymbol: str): http.Response {
+        return http.get("https://api.twelvedata.com/time_series?symbol={tickerSymbol}&interval=1min&outputsize=1&apikey={this.key.value()}");
+    }
+}
+
+let recentStockPriceCache = new cloud.Counter(
+  initial: 0
+);
+
+let stockUpdatesQueue = new cloud.Queue();
+let twelveDataApi = new TwelveDataApi();
+
+let stockUpdatesFetchSchedule = new cloud.Schedule(rate: 2m);       // Twelve Data free tier gives you 800 API credits per day. So with a rate of 2 minutes, you use 720 API credits per day
+let stockUpdatesPoller = stockUpdatesFetchSchedule.onTick(inflight () => {
+  let stockUpdates = twelveDataApi.stockUpdates(tickerSymbol);
+
+  log("Status: {stockUpdates.status}");
+  log("Body: {stockUpdates.body}");
+
+  let stockUpdatesBody = stockUpdates.body;
+  log("Received this stock updates: {stockUpdatesBody}");
+
+  let stockUpdatesBodyJson = Json.parse(stockUpdatesBody);
+  let latestStockPriceStr = stockUpdatesBodyJson.get("values").getAt(0).get("close").asStr();
+  let latestStockPrice = num.fromStr(latestStockPriceStr);
+
+  let previousStockPrice = recentStockPriceCache.peek(tickerSymbol);
+  log("Stock price for {tickerSymbol} changed from {previousStockPrice} to {latestStockPrice} with a difference of: {latestStockPrice - previousStockPrice}");
+
+  recentStockPriceCache.set(latestStockPrice, tickerSymbol);
+  stockUpdatesQueue.push(stockUpdatesBody);
+
+
+});
+```
+
+--- END OF EXAMPLE ---
+
+A backend only (at this point) app to manage a list of to-do tasks. Exposes a REST based API to manage the list.
+
+bring cloud;
+bring http;
+bring util;
+
+// Define a bucket for storing todo items
+let todoBucket = new cloud.Bucket();
+
+// Initialize the API
+let api = new cloud.Api();
+
+// Add a todo item
+api.post("/todo", inflight (request) => {
+  let id = util.uuidv4();
+  let todo = request.body;
+  todoBucket.putJson(id, todo);
+  return {
+    status: 201,
+    body: "Todo added."
+  };
+});
+
+// Get all todo items
+api.get("/todos", inflight () => {
+  // create an empty MutArray
+  let todos = MutArray<Json>[];
+  // adds elements into the array
+  for id in todoBucket.list() {
+    todos.push(todoBucket.getJson(id));
+  }
+  return {
+    status: 200,
+    body: Json.stringify(todos)
+  };
+});
+
+// Get a specific todo item
+api.get("/todos/:id", inflight (request) => {
+  let id = request.vars.get("id");
+  if let todo = todoBucket.tryGetJson(id) {
+    return {
+      status: 200,
+      body: Json.stringify(todo)
+    };
+  } else {
+    return {
+      status: 404,
+      body: "Todo not found."
+    };
+  }
+});
+
+// Update a todo item
+api.put("/todos/:id", inflight (request) => {
+  let id = request.vars.get("id");
+  let todo = request.body;
+  if (todoBucket.exists(id)) {
+    todoBucket.putJson(id, todo);
+    return {
+      status: 200,
+      body: "Todo updated."
+    };
+  } else {
+    return {
+      status: 404,
+      body: "Todo not found."
+    };
+  }
+});
+
+// Delete a todo item
+api.delete("/todos/:id", inflight (request) => {
+  let id = request.vars.get("id");
+  if (todoBucket.exists(id)) {
+    todoBucket.delete(id);
+    return {
+      status: 204
+    };
+  } else {
+    return {
+      status: 404,
+      body: "Todo not found."
+    };
+  }
+});
+
+--- END OF EXAMPLE ---
+
+Create a schedule that adds a file with the current date to a bucket every minute
+
+```
+bring cloud;
+bring util; // For date formatting
+
+// Create a bucket
+let myBucket = new cloud.Bucket();
+
+// Define a schedule that runs every minute
+let schedule = new cloud.Schedule(rate: 1m);
+
+schedule.onTick(inflight () => {
+  // Format the current date and time as a string
+  let currentDateTime = datetime.systemNow().toIso();
+  let filename = "date_" + currentDateTime + ".txt";
+  let fileContent = "Current date and time: " + currentDateTime;
+
+  // Add a file to the bucket with the current date and time
+  myBucket.put(filename, fileContent);
+});
+```
+
+--- END OF EXAMPLE ---
+
+example of a few tests using the Topic resource:
+
+```wing
+bring cloud;
+bring util;
+
+// create a new cloud topic
+let t = new cloud.Topic();
+
+//create a new cloud counter
+let c = new cloud.Counter();
+
+// each of the onMessage handlers will be called when something is published to the topic
+t.onMessage(inflight() => {
+  c.inc();
+});
+
+t.onMessage(inflight() => {
+  c.inc();
+});
+
+test "onMessage" {
+
+// this is a test in which we publish five messages to the topic
+  for i in 0..5 {
+    t.publish("msg");
+  }
+
+// then we wait until the counter returns the right count.
+  util.waitUntil(inflight () => {
+    return c.peek() == 10;
+  }, timeout: 10s);
+
+  assert(c.peek() == 10);
+}
+
+```
+
+--- END OF EXAMPLE ---
+
+Creating a hello world app using a topic and a bucket:
+
+```wing
+bring cloud;
+
+// Create a bucket
+let bucket = new cloud.Bucket();
+
+// Create a topic
+let topic = new cloud.Topic();
+
+// Function to add a message to the bucket and publish a notification
+let addMessage = inflight () => {
+  let message = "Hello, World!";
+  // Put the message in the bucket
+  bucket.put("message.txt", message);
+};
+
+// Subscribe to the topic to log messages
+topic.onMessage(inflight (message: str) => {
+  log("Topic published message: {message}");
+  addMessage();
+});
+
+
+new cloud.Function(inflight () => {
+  // Publish a message to the topic
+  topic.publish("A new message was added to the bucket.");
+});
+```
+
+--- END OF EXAMPLE ---
+
+Create a hello world app using a cloud Function only:
+
+```wing
+bring cloud;
+
+let helloWorld = new cloud.Function(inflight () => {
+  log("Hello, World!");
+});
+```
+--- END OF EXAMPLE ---
+Create a hello world app using a cloud topic:
+
+```
+bring cloud;
+
+let topic = new cloud.Topic();
+
+topic.onMessage(inflight (msg: str) => {
+  log(msg);
+});
+
+new cloud.Function(inflight () => {
+  topic.publish(Json.stringify({ message: "Hello, World!" }));
+});
+
+```
+
+--- END OF EXAMPLE ---
+
+bring cloud;
+bring util;
+bring math;
+
+// Primary and backup buckets
+let primaryBucket = new cloud.Bucket();
+let backupBucket = new cloud.Bucket();
+
+// API Gateway to write to the primary bucket
+let api = new cloud.Api();
+api.post("/write", inflight (request) => {
+  // request.body is the content of the file to be written, it is optional
+  let content = request.body ?? "";
+  let filename = util.uuidv4() + ".txt";
+  primaryBucket.put(filename, content);
+  return {
+    status: 200,
+    body: "File written successfully."
+  };
+});
+
+// Function to copy new files from the primary to the backup bucket
+primaryBucket.onUpdate(inflight (key) => {
+  backupBucket.put(key, primaryBucket.get(key));
+});
+
+// Schedule to clean up files older than 48 hours every 24 hours in the backup bucket
+let schedule = new cloud.Schedule(rate: 24h);
+
+let scheduleHandler = inflight () => {
+  let cutoff = datetime.systemNow().timestamp - duration.fromHours(48).seconds;
+  for file in backupBucket.list() {
+    let lastModified = backupBucket.metadata(file)?.lastModified?.timestamp ?? math.INF;
+    if lastModified < cutoff {
+      backupBucket.delete(file);
+    }
+  }
+ };
+
+schedule.onTick(scheduleHandler);
+
+--- END OF EXAMPLE ---
+
+creating 3 lambdas:
+
+```wing 
+bring cloud;
+
+let l1 = new cloud.Function(handler) as "first lambda";
+let l2 = new cloud.Function(handler) as "second lambda";
+let l3 = new cloud.Function(handler) as "third lambda";
+```
+--- END OF EXAMPLE ---
+
+connect a lambda to a bucket with read permissions:
+
+```wing 
+bring cloud;
+
+let bucket = new cloud.Bucket();
+
+let handler = inflight () => {
+  bucket.get("hello.txt");
+};
+
+let l1 = new cloud.Function(handler);
+```
+--- END OF EXAMPLE ---
+
+When creating more then one resource from the same type, we need to add "as <identifier" at the end of the initialization.
+
+For example: 
+
+more than one bucket:
+
+```wing
+bring cloud;
+
+let bucket = new cloud.Bucket() as "main bucket";
+let archive = new cloud.Bucket() as "archive bucket";
+```
+
+more than one topic:
+
+```wing
+bring cloud;
+
+let messageTopic = new cloud.Bucket() as "messages";
+let notificationTopic = new cloud.Bucket() as "notifications";
+```
+
+etc...
+
+--- END OF EXAMPLE ---
+

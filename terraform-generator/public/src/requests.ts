@@ -1,6 +1,10 @@
 import { toast } from "react-toastify";
+import "../.winglibs/wing-env.d.ts";
 
 const CONVERSATION_ID = "conversationId";
+
+export const API_URL =
+  window.wing?.env?.API_URL || import.meta.env.VITE_API_URL;
 
 export const ask = async (
   prompt: string,
@@ -14,7 +18,7 @@ export const ask = async (
     localStorage.setItem(CONVERSATION_ID, conversationId); // TODO: add expiration
   }
   try {
-    const res = await fetch(import.meta.env.VITE_API_URL! + "/ask", {
+    const res = await fetch(API_URL + "ask", {
       headers: {
         sId: id,
         "conversation-id": conversationId,

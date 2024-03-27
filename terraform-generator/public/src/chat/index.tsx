@@ -1,92 +1,86 @@
-import { useCallback, useEffect, useState } from "react";
-import { Instructions } from "./instructions";
-import { ask } from "../requests";
-import { io } from "socket.io-client";
+import { Instructions } from "../instructions";
+import { useSelector } from "react-redux";
+import { Role, RootState } from "../state/root";
+import { AiInput } from "../landing/input";
+import { CopyTerraform, DownloadTerraform } from "./terraform";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-interface Message {
-  sender: "user" | "ai";
-  content: string;
+function toBinary(str: string): string {
+  const codeUnits = new Uint16Array(str.length);
+  for (let i = 0; i < codeUnits.length; i++) {
+    codeUnits[i] = str.charCodeAt(i);
+  }
+  return window.btoa(String.fromCharCode(...new Uint8Array(codeUnits.buffer)));
 }
 
-const socket = io(import.meta.env.VITE_WS_URL);
-
-const INITIAL_MESSAGES: Message[] = [];
-
-export const Chat = ({
-  setTerraform,
-  setWing,
-}: {
-  setTerraform: (t: string) => void;
-  setWing: (t: string) => void;
-}) => {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
-  const [prompt, setPrompt] = useState("");
-  const [id, setId] = useState<string>();
-
-  const addMessage = useCallback(
-    (sender: "user" | "ai", content: string) => {
-      setMessages([...messages, { sender, content }]);
-    },
-    [messages],
-  );
+export const Chat = () => {
+  const messages = useSelector((state: RootState) => state.messages);
+  const wing = useSelector((state: RootState) => state.wing);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    socket.on("connect", () => {
-      setId(socket.id);
-    });
-
-    socket.on("message", (msg) => {
-      addMessage("ai", msg);
-    });
-  }, [addMessage]);
-
-  const generateTF = async () => {
-    addMessage("user", prompt);
-    setPrompt("");
-    const res = await ask(prompt, id!);
-
-    if (res) {
-      const { terraform, wing, error } = res;
-      if (error) {
-        addMessage("ai", error);
-      } else if (terraform) {
-        setTerraform(terraform);
-        wing && setWing(wing);
-      }
+    if (!messages.length) {
+      navigate("/");
     }
-  };
+  }, [messages, navigate]);
 
   return (
-    <div className="flex flex-col rounded px-6 w-1/2 h-full">
-      <Instructions />
-      <div className="rounded  p-6 my-4 bg-neutral-900 h-full flex flex-col gap-2 overflow-auto">
-        {messages.map(({ sender, content }, i) => (
-          <div
-            key={i}
-            className={`p-4 text-gray-200 min-w-[150px] ${
-              sender === "ai"
-                ? "rounded-e-xl rounded-es-xl bg-gray-600 self-start"
-                : "rounded-s-xl rounded-ee-xl bg-gray-700 self-end mb-1"
-            }`}
-          >
-            {content}
-          </div>
-        ))}
-      </div>
+    <div className="grid grid-cols-2 grid-rows-1 h-full">
+      <div className="flex flex-col rounded px-6 w-full h-full">
+        <div className="rounded-lg  p-6 my-4 bg-gray-3 flex-grow flex flex-col gap-2 overflow-auto">
+          {messages.map(({ role, message, isTerraform }, i) => (
+            <div
+              key={i}
+              className={`p-4 text-gray-200 relative min-w-[150px] rounded-lg ${
+                role === Role.User
+                  ? "bg-gray-4 self-start"
+                  : " bg-gray-2 self-end"
+                // ? "rounded-e-xl rounded-es-xl bg-gray-600 self-start"
+                // : "rounded-s-xl rounded-ee-xl bg-gray-700 self-end mb-1"
+              } ${isTerraform ? "w-full" : ""}`}
+            >
+              {isTerraform ? (
+                <div className=" text-xs">
+                  <div className="absolute right-6 flex gap-2">
+                    <CopyTerraform value={message} />
+                    <DownloadTerraform value={message} />
+                  </div>
+                  {message.split("\n").map((e, i) => (
+                    <code className="block" key={i}>
+                      {e}
+                    </code>
+                  ))}
+                </div>
+              ) : (
+                message
+              )}
+            </div>
+          ))}
+        </div>
 
-      <div className="flex items-center justify-center gap-2">
-        <input
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Create a terraform backend"
-          className="border-2 rounded p-3 w-full bg-neutral-900 border-neutral-800 text-gray-400 outline-0"
+        <div className="flex flex-col items-center justify-center gap-2">
+          <AiInput />
+          <Instructions />
+        </div>
+      </div>
+      <div className=" border-slate-700 flex flex-col items-center justify-center my-2 overflow-hidden">
+        <iframe
+          className="w-full h-full rounded-lg mt-2"
+          src={`https://playground-git-tsuf-stealing-machines-monada.vercel.app/?theme=dark&layout=6&code=${toBinary(
+            //TODO: replace URL
+            wing || "bring cloud;",
+          )}`}
         />
-        <button
-          className="border-0 rounded p-3 text-gray-100 bg-gray-500 hover:bg-gray-400 w-40 flex items-center justify-center gap-1"
-          onClick={generateTF}
+        <a
+          className="text-blue-400"
+          target="_blank"
+          href={`https://www.winglang.io/play/?theme=dark&code=${toBinary(
+            wing || "bring cloud;",
+          )}`}
         >
-          Generate <img src="/tf-white.svg" className="h-6" />
-        </button>
+          link to the playground
+        </a>
       </div>
     </div>
   );

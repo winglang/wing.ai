@@ -93,13 +93,13 @@ export const validateInstructions = async (prompt: string) => {
 };
 
 const context = `
-${readFileSync("../../files/examples.txt", {
+${readFileSync("./files/examples.txt", {
   encoding: "utf-8",
 })}
-${readFileSync("../../files/std.txt", {
+${readFileSync("./files/std.txt", {
   encoding: "utf-8",
 })}
-${readFileSync("../../files/wing-sdk.txt", { encoding: "utf-8" })}
+${readFileSync("./files/wing-sdk.txt", { encoding: "utf-8" })}
   
 You are a wing expert, you write only wing code in response.`;
 
@@ -119,7 +119,7 @@ export const generateContent = async (prompt: string, history = []) => {
   const chat = model.startChat({
     generationConfig,
     safetySettings,
-    // history: history.map(convertToHistory),
+    history: history.map(convertToHistory),
   });
 
   const result = await chat.sendMessage(context + `\n${prompt}`);

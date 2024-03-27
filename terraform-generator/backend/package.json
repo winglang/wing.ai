@@ -4,25 +4,15 @@
   "description": "A description of my Wing application",
   "author": "Your Name",
   "license": "MIT",
-  "scripts": {
-    "start": "nodemon index.ts",
-    "compile": "wing compile main.ts",
-    "test": "wing test main.ts"
-  },
+  "wing": true,
   "dependencies": {
-    "@google/generative-ai": "^0.2.1",
-    "@wingcloud/framework": "^0.59.6",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.18.2",
-    "json-to-tf": "^0.3.1",
-    "socket.io": "^4.7.4",
-    "ts-node": "^10.9.2"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20",
-    "winglang": "^0.59.6"
+    "@cdktf/provider-aws": "^19.10.0",
+    "@cdktf/provider-helm": "^10.0.0",
+    "@cdktf/provider-kubernetes": "^11.2.0",
+    "@cdktf/provider-null": "^10.0.0",
+    "@cdktf/provider-tls": "^10.0.0",
+    "@winglibs/containers": "^0.0.23",
+    "@winglibs/vite": "^0.1.4",
+    "cdktf": "^0.20.5"
   }
 }

@@ -1,4 +1,3 @@
-import { execSync, spawn } from "child_process";
 import {
   mkdtempSync,
   existsSync,
@@ -17,6 +16,8 @@ import {
 } from "./gemini";
 const { jsonToTf } = require("json-to-tf");
 import { Server } from "socket.io";
+
+import { compile } from "@winglang/compiler";
 
 import cors from "cors";
 
@@ -67,9 +68,13 @@ io.on("connection", (socket) => {
   });
 });
 
-io.listen(3001);
+io.listen(server);
 
-app.get("/instructions", async (req, res) => {
+app.get("/", async (_, res) => {
+  res.send({ ok: true });
+});
+
+app.get("/instructions", async (_, res) => {
   res.send({ instructions: INSTRUCTIONS });
 });
 
@@ -99,7 +104,9 @@ const generateWingCode = async (options: GenerateOptions): Promise<string> => {
 
   try {
     emitMessage(id, `Compiling ${times > 1 ? "(again)" : ""}...`);
-    execSync("wing compile -t tf-aws", { cwd: tempDir });
+    await compile(join(tempDir, "main.w"), {
+      platform: ["tf-aws"],
+    });
     return wing;
   } catch (error) {
     if (times < MAX_ATTEMPTS) {
@@ -119,11 +126,9 @@ const generateWingCode = async (options: GenerateOptions): Promise<string> => {
 
 app.post("/ask", async (req, res) => {
   const id = req.headers.sid as string;
-  console.log({ namespace: id });
   const prompt = req.body?.prompt;
   if (!prompt) {
-    res.status(500).json({ error: "Empty prompt" });
-    return;
+    return res.status(500).json({ error: "Empty prompt" });
   }
 
   emitMessage(id, "Validating prompt...");
@@ -174,6 +179,6 @@ app.post("/ask", async (req, res) => {
   return res.status(500).json({ error: "invalid prompt" });
 });
 
-app.listen(process.env.PORT ?? 3000, () => {
+server.listen(process.env.PORT ?? 3000, () => {
   console.log("server is up and running");
 });
