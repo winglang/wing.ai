@@ -1,9 +1,16 @@
 bring "@cdktf/provider-aws" as aws;
 bring "cdktf" as cdktf;
 
+struct lightSailOptions {
+  image: str;
+  repository: str;
+  port: num;
+  env: Map<str>?;
+}
+
 pub class lightSail {
   pub url: str;
-  new (image: str, repository: str) {
+  new (options: lightSailOptions) {
     let containerService = new aws.lightsailContainerService.LightsailContainerService({
       name: "tf-generator",
       power: "nano",
@@ -30,22 +37,23 @@ pub class lightSail {
     });
 
     let policy = new aws.ecrRepositoryPolicy.EcrRepositoryPolicy({
-        repository: repository,
+        repository: options.repository,
         policy: iamDocument.json
     });
+
+    let var ports = MutJson{};
+    ports.set("{options.port}", "HTTP");
     
     let deployment = new aws.lightsailContainerServiceDeploymentVersion.LightsailContainerServiceDeploymentVersion({
       container: {
         container_name: containerService.name,
-        image: image,
-        ports: {
-          "8080": "HTTP",
-          "8081": "HTTP"
-        }
+        image: options.image,
+        environment: options.env,
+        ports: Json.deepCopy(ports)
       },
       publicEndpoint: {
         containerName: containerService.name,
-        containerPort: 8080,
+        containerPort: options.port,
         healthCheck: {
           healthyThreshold: 2,
           unhealthyThreshold: 2,

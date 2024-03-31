@@ -103,26 +103,17 @@ ${readFileSync("./files/wing-sdk.txt", { encoding: "utf-8" })}
   
 You are a wing expert, you write only wing code in response.`;
 
-export interface History {
-  role: "model" | "user";
-  text: string;
-}
-
-export const convertToHistory = (history: History) => {
-  return {
-    role: history.role,
-    parts: [{ text: history.text }],
-  };
-};
-
-export const generateContent = async (prompt: string, history = []) => {
+export const generateContent = async (prompt: string, wing?: string) => {
   const chat = model.startChat({
     generationConfig,
     safetySettings,
-    history: history.map(convertToHistory),
   });
 
-  const result = await chat.sendMessage(context + `\n${prompt}`);
+  const message = wing
+    ? `${context}\n You generated the following wing code: \`\`\`wing ${wing}\n\`\`\`.\n ${prompt}`
+    : `${context}\n${prompt}`;
+
+  const result = await chat.sendMessage(message);
   const response = result.response;
   return response.text();
 

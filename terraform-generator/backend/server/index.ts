@@ -84,20 +84,45 @@ const emitMessage = (id: string | undefined, message: string) => {
   }
 };
 
+interface TrackingEvent {
+  id: string;
+  prompt: string;
+  origin: string;
+  generatedCode?: string;
+  existingCode?: string;
+  hasError: boolean;
+}
+
+const sendTrackingEvent = async (e: TrackingEvent) => {
+  if (!process.env.TRACKER_URL) {
+    console.error(`no tracker url.\n${JSON.stringify(e, null, 2)}`);
+    return;
+  }
+  try {
+    await fetch(process.env.TRACKER_URL, {
+      body: JSON.stringify(e),
+      method: "POST",
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 interface GenerateOptions {
   tempDir: string;
   prompt: string;
   id: string;
   maxAttempts: number;
   times?: number;
+  wing?: string;
 }
 
 const generateWingCode = async (options: GenerateOptions): Promise<string> => {
-  const { id, tempDir, times = 1, prompt } = options;
+  const { id, tempDir, times = 1, prompt, wing: existingWingCode } = options;
 
   emitMessage(id, `Generating wing code ${times > 1 ? "(again)" : ""}...`);
 
-  const wing = formatCode(await generateContent(prompt));
+  const wing = formatCode(await generateContent(prompt, existingWingCode));
 
   writeFileSync(join(tempDir, "main.w"), wing, { encoding: "utf-8" });
   console.log({ tempDir });
@@ -126,7 +151,8 @@ const generateWingCode = async (options: GenerateOptions): Promise<string> => {
 
 app.post("/ask", async (req, res) => {
   const id = req.headers.sid as string;
-  const prompt = req.body?.prompt;
+  const { prompt, wing: existingCode, origin } = req.body ?? {};
+
   if (!prompt) {
     return res.status(500).json({ error: "Empty prompt" });
   }
@@ -144,6 +170,7 @@ app.post("/ask", async (req, res) => {
         tempDir,
         prompt,
         id,
+        wing: existingCode,
         maxAttempts: MAX_ATTEMPTS,
       });
 
@@ -161,20 +188,39 @@ app.post("/ask", async (req, res) => {
 
         rmSync(tempDir, { recursive: true });
         emitMessage(id, "Done!");
-        return res.status(200).json({ wing, terraform, port: 3001 });
+        sendTrackingEvent({
+          id,
+          prompt,
+          existingCode,
+          origin,
+          generatedCode: wing,
+          hasError: false,
+        });
+        return res.status(200).json({ wing, terraform });
       }
       rmSync(tempDir, { recursive: true });
       console.log(wing);
+      sendTrackingEvent({
+        id,
+        prompt,
+        existingCode,
+        generatedCode: wing,
+        origin,
+        hasError: true,
+      });
       return res
         .status(500)
         .json({ error: "Could not compile wing code, we're sorry :(" });
     } catch (error) {
       console.log((error as Error).message);
+      sendTrackingEvent({ id, prompt, existingCode, origin, hasError: true });
       return res
         .status(500)
         .json({ error: "Error while generating terraform files" });
     }
   }
+
+  sendTrackingEvent({ id, prompt, existingCode, origin, hasError: true });
 
   return res.status(500).json({ error: "invalid prompt" });
 });

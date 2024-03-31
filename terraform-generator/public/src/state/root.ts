@@ -1,5 +1,5 @@
 import { Dispatch, createSlice } from "@reduxjs/toolkit";
-import { ask } from "../requests";
+import { Origin, ask } from "../requests";
 
 export enum Role {
   User = "user",
@@ -32,7 +32,7 @@ const initialState: RootState = {
     //   isTerraform: true,
     // },
   ],
-  wing: "bring cloud;",
+  wing: "",
   loading: false,
 };
 
@@ -65,8 +65,13 @@ const { setWing } = root.actions;
 export const askAi =
   (prompt: string) => async (dispatch: Dispatch, getState: () => RootState) => {
     dispatch(addMessage({ role: Role.User, message: prompt }));
-    const { id } = getState();
-    const res = await ask(prompt, id!);
+    const { id, wing } = getState();
+    const res = await ask(
+      prompt,
+      id!,
+      wing,
+      wing ? Origin.Chat : Origin.Landing, //TODO: to see if it can be omitted
+    );
 
     if (res) {
       const { terraform, wing, error } = res;
