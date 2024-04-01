@@ -58,13 +58,13 @@ trackerApi.post("/track", inflight (req) => {
 
 });
 
-let container = new _rc.repoContainer(imageName: "tf-generator", tag: "7", path: "./server", port: 8081, env: {
+let container = new _rc.repoContainer(imageName: "tf-generator", tag: "7", path: "./backend/server", port: 8081, env: {
   TRACKER_URL: "{trackerApi.url}/track"
 });
 
 
 let website = new vite.Vite(
-  root: "../public",
+  root: "./public",
   publicEnv: {
     API_URL: container.url,
   },
