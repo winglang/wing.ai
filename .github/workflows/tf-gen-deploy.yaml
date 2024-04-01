@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - ./terraform-generator/**
+      - terraform-generator/**
 
 permissions:
   id-token: write
