@@ -67,8 +67,7 @@ export const Chat = () => {
       <div className=" border-slate-700 flex flex-col items-center justify-center my-2 overflow-hidden">
         <iframe
           className="w-full h-full rounded-lg mt-2"
-          src={`https://playground-git-tsuf-stealing-machines-monada.vercel.app/?theme=dark&layout=6&full=1&code=${toBinary(
-            //TODO: replace URL
+          src={`https://www.winglang.io/play/?theme=dark&layout=6&full=1&code=${toBinary(
             wing || "bring cloud;",
           )}`}
         />

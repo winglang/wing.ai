@@ -59,6 +59,7 @@ jobs:
       - name: Compile
         run: |
           cd ${{ env.PROJECT_PATH }}
+          npm ci
           npm install -g winglang
           wing compile -t tf-aws backend/main.w
 
