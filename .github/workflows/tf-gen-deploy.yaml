@@ -54,6 +54,7 @@ jobs:
         run: |
           cd ${{ env.PROJECT_PATH }}/public
           npm ci
+          ls -la
 
       - name: Deploy Winglang App
         uses: winglang/wing-github-action/actions/deploy@main
