@@ -50,10 +50,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # - name: Install deps
-      #   run: |
-      #     cd ${{ env.PROJECT_PATH }}
-      #     npm ci
+      - name: Install deps
+        run: |
+          cd ${{ env.PROJECT_PATH }}
+          npm install -g vite
 
       - name: Deploy Winglang App
         uses: winglang/wing-github-action/actions/deploy@main
