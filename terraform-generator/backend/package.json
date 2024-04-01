@@ -1,0 +1,19 @@
+{
+  "name": "my-wing-app",
+  "version": "0.0.0",
+  "description": "A description of my Wing application",
+  "author": "Your Name",
+  "license": "MIT",
+  "wing": true,
+  "dependencies": {
+    "@cdktf/provider-aws": "^19.10.0",
+    "@cdktf/provider-helm": "^10.0.0",
+    "@cdktf/provider-kubernetes": "^11.2.0",
+    "@cdktf/provider-null": "^10.0.0",
+    "@cdktf/provider-tls": "^10.0.0",
+    "@winglibs/containers": "^0.0.23",
+    "@winglibs/dynamodb": "^0.0.8",
+    "@winglibs/vite": "^0.1.4",
+    "cdktf": "^0.20.5"
+  }
+}

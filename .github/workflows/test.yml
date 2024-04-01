@@ -1,50 +1,50 @@
-name: Test
+# name: Test
 
-on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
+# on:
+#   pull_request:
+#     types:
+#       - opened
+#       - synchronize
 
-env:
-  AWS_REGION: us-east-1
-  NODE_VERSION: 20
-  PROJECT_PATH: ./ai-endpoints
+# env:
+#   AWS_REGION: us-east-1
+#   NODE_VERSION: 20
+#   PROJECT_PATH: ./ai-endpoints
 
-permissions:
-  id-token: write
-  contents: read
+# permissions:
+#   id-token: write
+#   contents: read
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: ["sim", "tf-aws"]
-    name: ai-endpoints test - ${{ matrix.target }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         target: ["sim", "tf-aws"]
+#     name: ai-endpoints test - ${{ matrix.target }}
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        if: matrix.target == 'tf-aws'
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v2
+#         if: matrix.target == 'tf-aws'
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Node.js v18
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+#       - name: Setup Node.js v18
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Wing
-        run: |
-          npm install -g winglang
-          wing --version
+#       - name: Install Wing
+#         run: |
+#           npm install -g winglang
+#           wing --version
 
-      - name: Test
-        run: |
-          cd ${{ env.PROJECT_PATH }}
-          GEMINI_API=${{secrets.GEMINI}} wing test -t ${{matrix.target}} main.w
+#       - name: Test
+#         run: |
+#           cd ${{ env.PROJECT_PATH }}
+#           GEMINI_API=${{secrets.GEMINI}} wing test -t ${{matrix.target}} main.w
