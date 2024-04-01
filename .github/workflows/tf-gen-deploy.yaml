@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - terraform-generator/**
+      - .github/workflows/tf-gen-deploy.yaml
 
 permissions:
   id-token: write
@@ -15,7 +16,7 @@ permissions:
 env:
   AWS_REGION: us-east-1
   TF_BACKEND_BUCKET_REGION: us-east-1
-  PROJECT_PATH: ./terraform-generator
+  PROJECT_PATH: ./terraform-generator/backend
   S3_BUCKET_NAME: ai-endpoint-c85c1af5-20240226134657000700000001 #TODO:
   NODE_VERSION: 20
   ENV_PATH: ./terraform-generator/backend/server
