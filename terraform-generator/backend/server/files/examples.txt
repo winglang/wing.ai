@@ -1,8 +1,6 @@
-To build a private api gateway use this code: 
+To build a api gateway use this code: 
 
-on main.w write:
-
-```
+```wing
 // importing libraries
 bring cloud;
 bring http;
@@ -30,12 +28,6 @@ new cloud.Function(inflight () => {
 }) as "consumer";
 ```
 
-in `wing.toml` add the following configuration:
-
-[ tf-aws ]
-vpc = "new"
-vpc_lambda = true
-vpc_api_gateway = true
 
 
 --- END OF EXAMPLE ---
@@ -46,8 +38,8 @@ bring cloud;
 bring util;
 bring expect;
 
-let bucket = new cloud.Bucket();
-let queue = new cloud.Queue();
+let bucket = new cloud.Bucket() as "b1";
+let queue = new cloud.Queue() as "q";
 
 queue.setConsumer(inflight (message) => {
   bucket.put("wing.txt", "Hello, {message}");
@@ -292,7 +284,7 @@ class BasicAuth {
 }
 
 let auth = new BasicAuth();
-let api = new cloud.Api();
+let api = new cloud.Api() as "api";
 
 api.get("/hello", inflight (req) => {
   let authenticated = auth.call(req);
@@ -347,8 +339,8 @@ bring ex;
 bring util;
 bring expect;
 
-let queue = new cloud.Queue();
-let redis = new ex.Redis();
+let queue = new cloud.Queue() as "queue";
+let redis = new ex.Redis() as "redis";
 
 queue.setConsumer(inflight (message) => {
   redis.set("hello", message);
@@ -390,12 +382,12 @@ class TwelveDataApi {
 
 let recentStockPriceCache = new cloud.Counter(
   initial: 0
-);
+) as "recentStockPriceCache";
 
-let stockUpdatesQueue = new cloud.Queue();
+let stockUpdatesQueue = new cloud.Queue() as "stockUpdates";
 let twelveDataApi = new TwelveDataApi();
 
-let stockUpdatesFetchSchedule = new cloud.Schedule(rate: 2m);       // Twelve Data free tier gives you 800 API credits per day. So with a rate of 2 minutes, you use 720 API credits per day
+let stockUpdatesFetchSchedule = new cloud.Schedule(rate: 2m) as "fetchSchedule";       // Twelve Data free tier gives you 800 API credits per day. So with a rate of 2 minutes, you use 720 API credits per day
 let stockUpdatesPoller = stockUpdatesFetchSchedule.onTick(inflight () => {
   let stockUpdates = twelveDataApi.stockUpdates(tickerSymbol);
 
@@ -428,10 +420,10 @@ bring http;
 bring util;
 
 // Define a bucket for storing todo items
-let todoBucket = new cloud.Bucket();
+let todoBucket = new cloud.Bucket() as "b";
 
 // Initialize the API
-let api = new cloud.Api();
+let api = new cloud.Api() as "api";
 
 // Add a todo item
 api.post("/todo", inflight (request) => {
@@ -517,10 +509,10 @@ bring cloud;
 bring util; // For date formatting
 
 // Create a bucket
-let myBucket = new cloud.Bucket();
+let myBucket = new cloud.Bucket() as "my-bucket";
 
 // Define a schedule that runs every minute
-let schedule = new cloud.Schedule(rate: 1m);
+let schedule = new cloud.Schedule(rate: 1m) as "schedule";
 
 schedule.onTick(inflight () => {
   // Format the current date and time as a string
@@ -542,10 +534,10 @@ bring cloud;
 bring util;
 
 // create a new cloud topic
-let t = new cloud.Topic();
+let t = new cloud.Topic() as "t";
 
 //create a new cloud counter
-let c = new cloud.Counter();
+let c = new cloud.Counter() as "c";
 
 // each of the onMessage handlers will be called when something is published to the topic
 t.onMessage(inflight() => {
@@ -581,10 +573,10 @@ Creating a hello world app using a topic and a bucket:
 bring cloud;
 
 // Create a bucket
-let bucket = new cloud.Bucket();
+let bucket = new cloud.Bucket() as "bucket";
 
 // Create a topic
-let topic = new cloud.Topic();
+let topic = new cloud.Topic() as "topic";
 
 // Function to add a message to the bucket and publish a notification
 let addMessage = inflight () => {
@@ -603,7 +595,7 @@ topic.onMessage(inflight (message: str) => {
 new cloud.Function(inflight () => {
   // Publish a message to the topic
   topic.publish("A new message was added to the bucket.");
-});
+}) as "f1";
 ```
 
 --- END OF EXAMPLE ---
@@ -615,7 +607,7 @@ bring cloud;
 
 let helloWorld = new cloud.Function(inflight () => {
   log("Hello, World!");
-});
+}) as "hello";
 ```
 --- END OF EXAMPLE ---
 Create a hello world app using a cloud topic:
@@ -623,7 +615,7 @@ Create a hello world app using a cloud topic:
 ```
 bring cloud;
 
-let topic = new cloud.Topic();
+let topic = new cloud.Topic() as "topic";
 
 topic.onMessage(inflight (msg: str) => {
   log(msg);
@@ -631,7 +623,7 @@ topic.onMessage(inflight (msg: str) => {
 
 new cloud.Function(inflight () => {
   topic.publish(Json.stringify({ message: "Hello, World!" }));
-});
+}) as "function";
 
 ```
 
@@ -642,11 +634,11 @@ bring util;
 bring math;
 
 // Primary and backup buckets
-let primaryBucket = new cloud.Bucket();
-let backupBucket = new cloud.Bucket();
+let primaryBucket = new cloud.Bucket() as "primary";
+let backupBucket = new cloud.Bucket() as "secondary;
 
 // API Gateway to write to the primary bucket
-let api = new cloud.Api();
+let api = new cloud.Api() as "api";
 api.post("/write", inflight (request) => {
   // request.body is the content of the file to be written, it is optional
   let content = request.body ?? "";
@@ -664,7 +656,7 @@ primaryBucket.onUpdate(inflight (key) => {
 });
 
 // Schedule to clean up files older than 48 hours every 24 hours in the backup bucket
-let schedule = new cloud.Schedule(rate: 24h);
+let schedule = new cloud.Schedule(rate: 24h) as "24h-schedule";
 
 let scheduleHandler = inflight () => {
   let cutoff = datetime.systemNow().timestamp - duration.fromHours(48).seconds;
@@ -696,13 +688,13 @@ connect a lambda to a bucket with read permissions:
 ```wing 
 bring cloud;
 
-let bucket = new cloud.Bucket();
+let bucket = new cloud.Bucket() as "b1";
 
 let handler = inflight () => {
   bucket.get("hello.txt");
 };
 
-let l1 = new cloud.Function(handler);
+let l1 = new cloud.Function(handler) as "l1";
 ```
 --- END OF EXAMPLE ---
 

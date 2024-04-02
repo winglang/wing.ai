@@ -25,7 +25,7 @@ pub class repoContainer {
     let target = util.env("WING_TARGET");
     if (target == "sim") {
       // package docker
-        let taggedName =  "{options.imageName}:{options.tag}";
+        let taggedName =  "{options.imageName}:latest";
         repoContainer.exec("docker build . -t {taggedName}", { cwd: options.path });
 
         let container = new sim.Container({
