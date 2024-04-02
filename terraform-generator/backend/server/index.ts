@@ -8,12 +8,7 @@ import {
 import { join } from "path";
 import { tmpdir } from "os";
 import express from "express";
-import {
-  INSTRUCTIONS,
-  YES,
-  generateContent,
-  validateInstructions,
-} from "./gemini";
+import { YES, generateContent, validateInstructions } from "./gemini";
 const { jsonToTf } = require("json-to-tf");
 import { Server } from "socket.io";
 
@@ -74,10 +69,6 @@ app.get("/", async (_, res) => {
   res.send({ ok: true });
 });
 
-app.get("/instructions", async (_, res) => {
-  res.send({ instructions: INSTRUCTIONS });
-});
-
 const emitMessage = (id: string | undefined, message: string) => {
   if (id) {
     io.sockets.sockets.get(id)?.emit("message", message);
@@ -90,6 +81,7 @@ interface TrackingEvent {
   origin: string;
   generatedCode?: string;
   existingCode?: string;
+  timing: number;
   hasError: boolean;
 }
 
@@ -150,6 +142,7 @@ const generateWingCode = async (options: GenerateOptions): Promise<string> => {
 };
 
 app.post("/ask", async (req, res) => {
+  const timing = Date.now();
   const id = req.headers.sid as string;
   const { prompt, wing: existingCode, origin } = req.body ?? {};
 
@@ -195,6 +188,7 @@ app.post("/ask", async (req, res) => {
           origin,
           generatedCode: wing,
           hasError: false,
+          timing: Date.now() - timing,
         });
         return res.status(200).json({ wing, terraform });
       }
@@ -207,20 +201,35 @@ app.post("/ask", async (req, res) => {
         generatedCode: wing,
         origin,
         hasError: true,
+        timing: Date.now() - timing,
       });
       return res
         .status(500)
         .json({ error: "Could not compile wing code, we're sorry :(" });
     } catch (error) {
       console.log((error as Error).message);
-      sendTrackingEvent({ id, prompt, existingCode, origin, hasError: true });
+      sendTrackingEvent({
+        id,
+        prompt,
+        existingCode,
+        origin,
+        hasError: true,
+        timing: Date.now() - timing,
+      });
       return res
         .status(500)
         .json({ error: "Error while generating terraform files" });
     }
   }
 
-  sendTrackingEvent({ id, prompt, existingCode, origin, hasError: true });
+  sendTrackingEvent({
+    id,
+    prompt,
+    existingCode,
+    origin,
+    hasError: true,
+    timing: Date.now() - timing,
+  });
 
   return res.status(500).json({ error: "invalid prompt" });
 });

@@ -9,6 +9,7 @@ struct EventSchema {
   generatedCode: str;
   existingCode: str;
   hasError: bool;
+  timing: num;
 }
 
 pub class TrackerApi {
