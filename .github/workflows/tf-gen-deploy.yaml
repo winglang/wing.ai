@@ -20,6 +20,9 @@ env:
   S3_BUCKET_NAME: ai-endpoint-c85c1af5-20240226134657000700000001 #TODO:
   NODE_VERSION: 20
   ENV_PATH: ./terraform-generator/backend/server
+  REGION: us-east-1
+  BUCKET: tf-gen
+  TABLE: tf-gen-backend
 
 jobs:
   deploy:
@@ -56,7 +59,7 @@ jobs:
           npm install
           ls -la
 
-      - name: Install backend deps
+      - name: Install backend deps and winglang
         run: |
           cd ${{ env.PROJECT_PATH }}/backend
           npm install
@@ -65,7 +68,7 @@ jobs:
       - name: Compile
         run: |
           cd ${{ env.PROJECT_PATH }}/backend
-          wing compile -t tf-aws main.w
+          wing compile -t tf-aws -t ./s3-backend.js main.w
 
       # - name: Deploy Winglang App
       #   uses: winglang/wing-github-action/actions/deploy@main
