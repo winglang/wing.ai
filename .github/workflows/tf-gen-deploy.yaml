@@ -65,10 +65,12 @@ jobs:
           npm install
           npm install -g winglang
 
-      - name: Compile
+      - name: Compile and Deploy
         run: |
           cd ${{ env.PROJECT_PATH }}/backend
           wing compile -t tf-aws -t ./s3-backend.js main.w
+          terraform -chdir=./target/main.tfaws init
+          terraform -chdir=./target/main.tfaws apply --auto-approve
 
       # - name: Deploy Winglang App
       #   uses: winglang/wing-github-action/actions/deploy@main
