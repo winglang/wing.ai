@@ -14,7 +14,7 @@ exports.Platform = class TFBackend {
       s3: {
         bucket: BUCKET,
         region: REGION,
-        key: "/terraform.tfstate",
+        key: "terraform.tfstate",
         dynamodb_table: TABLE,
       },
     };
