@@ -53,13 +53,13 @@ jobs:
       - name: Install frontend deps
         run: |
           cd ${{ env.PROJECT_PATH }}/public
-          npm ci
+          npm install
           ls -la
 
       - name: Install backend deps
         run: |
           cd ${{ env.PROJECT_PATH }}/backend
-          npm ci
+          npm install
           npm install -g winglang
 
       - name: Compile
