@@ -373,16 +373,14 @@ In main.w:
 ```
 bring cloud;
 bring http;
+bring util;
 
 let tickerSymbol = "GME";
 
 class TwelveDataApi {
-    key: cloud.Secret;
 
     new() {
-        this.key = new cloud.Secret(
-          name: "twelve-data-api-key"
-        );
+        this.key = util.env("TWELVE_DATA_TOKEN");
     }
 
     pub inflight stockUpdates(tickerSymbol: str): http.Response {

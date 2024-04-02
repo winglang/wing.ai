@@ -677,55 +677,6 @@ schedule.onTick(inflight () => {
 ```
 
 ---
-title: Secret
-id: secret
-description: A built-in resource for securely storing secrets in the cloud.
-keywords:
-  [
-    Wing reference,
-    Wing language,
-    language,
-    Wing standard library,
-    Wing programming language,
-    secrets,
-  ]
-sidebar_position: 1
----
-
-The `cloud.Secret` class represents a secret value (like an API key, certificate, etc.) that is securely stored in the cloud.
-
-Secrets are encrypted at rest and in transit, and are only decrypted when they are used in a task.
-Storing a secret allows you to use the value in different compute tasks while only having to rotate or revoke it in one place.
-
-## Usage
-
-### Defining a secret
-
-```js
-bring cloud;
-
-let secret = new cloud.Secret(
-  name: "my-secret", // optional, defaults to a generated name
-);
-```
-
-Before deploying your application, you will be expected to store the secret value in a secure place according to the target-specific instructions below.
-
-### Retrieving secret values
-
-```js
-bring cloud;
-
-let secret = new cloud.Secret(
-  name: "my-api-key",
-);
-
-new cloud.Function(inflight () => {
-  let secretValue = secret.value(); // retrieve the secret as a `str` value
-  let secretValueAsJson = secret.valueJson(); // retrieve the secret as a `Json` value
-});
-
----
 title: Service
 id: service
 description: A built-in resource for publishing messages to subscribers.

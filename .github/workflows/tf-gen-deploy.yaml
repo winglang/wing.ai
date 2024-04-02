@@ -50,18 +50,22 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install deps
+      - name: Install frontend deps
         run: |
           cd ${{ env.PROJECT_PATH }}/public
           npm ci
           ls -la
 
-      - name: Compile
+      - name: Install backend deps
         run: |
-          cd ${{ env.PROJECT_PATH }}
+          cd ${{ env.PROJECT_PATH }}/backend
           npm ci
           npm install -g winglang
-          wing compile -t tf-aws backend/main.w
+
+      - name: Compile
+        run: |
+          cd ${{ env.PROJECT_PATH }}/backend
+          wing compile -t tf-aws main.w
 
       # - name: Deploy Winglang App
       #   uses: winglang/wing-github-action/actions/deploy@main
