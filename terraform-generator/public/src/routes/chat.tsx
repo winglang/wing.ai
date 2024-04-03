@@ -1,8 +1,8 @@
-import { Instructions } from "../instructions";
+import { Instructions } from "../componenets/instructions";
 import { useSelector } from "react-redux";
 import { Role, RootState } from "../state/root";
-import { AiInput } from "../landing/input";
-import { CopyTerraform, DownloadTerraform } from "./terraform";
+import { AiInput } from "../componenets/input";
+import { CopyTerraform, DownloadTerraform } from "../componenets/terraform";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 

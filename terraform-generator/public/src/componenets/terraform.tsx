@@ -62,18 +62,3 @@ export const DownloadTerraform = ({ value }: { value: string }) => {
     </button>
   );
 };
-
-const replaceJsx = (text: string, strToReplace: string, className?: string) => {
-  strToReplace;
-  className;
-  return text;
-  // const textArray = text.split(strToReplace);
-  // return textArray.map((str) => {
-  //   console.log(str);
-  //   if (str === strToReplace) {
-  //     console.log(str);
-  //     return <span className={className}>{str}</span>;
-  //   }
-  //   return str;
-  // });
-};

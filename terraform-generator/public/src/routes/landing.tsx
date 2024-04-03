@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Instructions } from "../instructions";
+import { Instructions } from "../componenets/instructions";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, askAi } from "../state/root";
 import { Action, Dispatch } from "@reduxjs/toolkit";
-import { AiInput } from "./input";
+import { AiInput } from "../componenets/input";
 import { useNavigate } from "react-router-dom";
 
 const examples = [

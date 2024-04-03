@@ -1,7 +1,7 @@
-import { Chat } from "./chat";
+import { Chat } from "./routes/chat";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Landing } from "./landing";
+import { Landing } from "./routes/landing";
 import { useDispatch } from "react-redux";
 import { Role, addMessage, setId } from "./state/root";
 import { useEffect } from "react";
