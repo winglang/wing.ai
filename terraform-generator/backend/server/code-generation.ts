@@ -126,9 +126,10 @@ export const processAiRequest = async (
 
     emitMessage(id, "Validating prompt...", io);
     const isValidPrompt = (await validateInstructions(prompt)).includes(YES);
-    emitMessage(id, "Prompt is valid!", io);
 
     if (isValidPrompt) {
+      emitMessage(id, "Prompt is valid!", io);
+
       try {
         let terraform;
         const tempDir = generateTempDirname(id);
