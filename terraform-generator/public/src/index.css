@@ -25,6 +25,14 @@
   .bg-gray-4 {
     background-color: #393939;
   }
+
+  .bg-gradient {
+    background: linear-gradient(
+      0deg,
+      rgba(0, 29, 73, 1) 0%,
+      rgba(29, 29, 29, 1) 40%
+    );
+  }
 }
 
 :root {

@@ -6,13 +6,14 @@ import { useDispatch } from "react-redux";
 import { Role, addMessage, setId } from "./state/root";
 import { useEffect } from "react";
 import { io } from "socket.io-client";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { API_URL } from "./requests";
 
 const socket = io(API_URL);
 
 function App() {
   const dispatch = useDispatch();
+  const location = useLocation();
 
   useEffect(() => {
     socket.on("connect", () => {
@@ -28,20 +29,28 @@ function App() {
 
   return (
     <>
-      <div className=" bg-gray-1 fixed h-full w-full -z-10"></div>
+      <div
+        className={`fixed h-full w-full -z-10 ${
+          location.pathname === "/" ? "bg-gradient" : "bg-gray-1"
+        }`}
+      ></div>
       <div className="p-6 h-[90vh] text-[#dadada] font-light ">
-        <div className="flex justify-start items-center">
-          <img src="/terry.svg" />
-          <p>the AI terraform generator</p>
-        </div>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" Component={Landing} />
-            <Route path="/chat" Component={Chat} />
-          </Routes>
-        </BrowserRouter>
+        <Link to="/">
+          <div className="flex justify-start items-center">
+            <img src="/terry.svg" />
+            <p>the AI terraform generator</p>
+          </div>
+        </Link>
+
+        <Routes>
+          <Route path="/" Component={Landing} />
+          <Route path="/chat" Component={Chat} />
+        </Routes>
         <span className="flex justify-center items-center mt-6 gap-2 italic font-thin">
-          powered by <img src="/wing.svg" />
+          powered by{" "}
+          <a href="https://www.winglang.io/" target="_blank">
+            <img src="/wing.svg" />
+          </a>
         </span>
         <ToastContainer />
       </div>

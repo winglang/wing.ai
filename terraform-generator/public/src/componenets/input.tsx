@@ -23,7 +23,7 @@ const Up = () => (
   </svg>
 );
 
-export const AiInput = () => {
+export const AiInput = ({ placeholder }: { placeholder: string }) => {
   const dispatch = useDispatch();
   const [value, setValue] = useState("");
 
@@ -33,10 +33,10 @@ export const AiInput = () => {
     setValue("");
   };
   return (
-    <div className="w-full h-[54px] flex border my-4 rounded-lg  p-2 pl-4 border-[#797979]">
+    <div className="w-full  bg-gray-1  h-[54px] flex border my-4 rounded-lg  p-2 pl-4 border-[#797979]">
       <input
         className="bg-transparent outline-0 flex-grow"
-        placeholder="Let's build a..."
+        placeholder={placeholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyUp={(e) => {
@@ -45,11 +45,13 @@ export const AiInput = () => {
           }
         }}
       />
-      {value && (
-        <button onClick={() => ask(value)}>
-          <Up />
-        </button>
-      )}
+      <button
+        className="disabled:opacity-25"
+        onClick={() => ask(value)}
+        disabled={!value}
+      >
+        <Up />
+      </button>
     </div>
   );
 };

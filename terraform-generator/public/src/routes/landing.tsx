@@ -1,16 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Instructions } from "../componenets/instructions";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState, askAi } from "../state/root";
-import { Action, Dispatch } from "@reduxjs/toolkit";
+import { RootState, askAi, reset } from "../state/root";
 import { AiInput } from "../componenets/input";
 import { useNavigate } from "react-router-dom";
 
 const examples = [
-  "Create an api",
-  "Connect a lambda to a queue",
-  "Create a public bucket",
-  "Create a counter",
+  "Create an Api",
+  "Connect a Lambda to a Queue",
+  "Create a Public Bucket",
+  "Create a Counter",
 ];
 
 export const Landing = () => {
@@ -26,34 +25,38 @@ export const Landing = () => {
     }
   }, [messagesLength, navigate]);
 
+  useEffect(() => {
+    dispatch(reset());
+  }, [dispatch]);
+
   const ask = (prompt: string) => {
     //@ts-expect-error some weird type stuff
     dispatch(askAi(prompt));
   };
 
   return (
-    <div className="flex flex-col items-center pt-[8%] h-full gap-6 w-1/3 m-auto">
-      <h4 className="display font-semibold text-4xl text-white">
-        What shall we build?
+    <div className="flex flex-col items-center pt-[8%] h-full gap-6 max-w-[600px] m-auto">
+      <h4 className="font-medium text-4xl text-white">
+        Create ready-to-use Terraform code using the following building blocks:
       </h4>
-      <p className="text-md">
-        Write a prompt describing the connections between the <br />
-        building blocks listed below to create Terraform backend.
-      </p>
-      <Instructions />
-      <AiInput />
 
-      <div className="grid grid-cols-2 w-full gap-4 mt-2 px-4">
+      <Instructions />
+      <p className="text-md">
+        Write your own prompt or try one of our examples:
+      </p>
+
+      <div className="grid grid-cols-2 w-full gap-4 mt-2">
         {examples.map((e, i) => (
           <button
             onClick={() => ask(e)}
-            className="rounded-lg border w-full p-4 border-[#797979] text-sm font-normal hover:bg-neutral-800 text-start"
+            className="rounded-lg border bg-gray-1 w-full p-4 border-[#797979] text-sm font-normal hover:bg-neutral-800 text-start"
             key={i}
           >
             {e}
           </button>
         ))}
       </div>
+      <AiInput placeholder="Let's build a..." />
     </div>
   );
 };

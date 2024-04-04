@@ -56,10 +56,14 @@ const root = createSlice({
     setWing(state, action: { payload: string }) {
       state.wing = action.payload;
     },
+    reset(state) {
+      state.wing = "";
+      state.messages = [];
+    },
   },
 });
 
-export const { addMessage, setId } = root.actions;
+export const { addMessage, setId, reset } = root.actions;
 const { setWing } = root.actions;
 
 export const askAi =

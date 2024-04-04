@@ -60,7 +60,7 @@ export const Chat = () => {
         </div>
 
         <div className="flex flex-col items-center justify-center gap-2">
-          <AiInput />
+          <AiInput placeholder="Add a..." />
           <Instructions />
         </div>
       </div>
