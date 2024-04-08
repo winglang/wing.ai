@@ -724,3 +724,50 @@ etc...
 
 --- END OF EXAMPLE ---
 
+DynamoDB table with an atomic counter
+```wing
+bring cloud;
+new cloud.Counter() as "counter";
+```
+
+--- END OF EXAMPLE ---
+
+An S3 bucket and a Lambda with permissions to write to it
+
+```wing
+bring cloud;
+let bucket = new cloud.Bucket() as "b";
+
+let hello_world = new cloud.Function(inflight () => {
+  bucket.put("hello.txt", "Hello, World!");
+}) as "fn";
+```
+
+--- END OF EXAMPLE ---
+
+A public S3 bucket
+
+```wing
+bring cloud;
+let bucket = new cloud.Bucket(public: true) as "public_bucket";
+```
+
+--- END OF EXAMPLE ---
+
+This is the only way to write
+"Lambda that gets triggered by an SQS queue":
+
+```wing
+bring cloud;
+let q = new cloud.Queue() as "q1";
+q.setConsumer(inflight () => {
+  log("I just got triggered!");
+});
+```
+--- END OF EXAMPLE ---
+
+
+
+
+
+

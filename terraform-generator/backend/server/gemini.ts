@@ -73,7 +73,7 @@ Schedules are useful for periodic tasks, such as running backups or sending dail
 **Website**- represents a static website that can be hosted in the cloud. 
 Websites are typically used to serve static content, such as HTML, CSS, and JavaScript files, which are updated whenever the application is redeployed.
 
-**Counter**- a stateful container for storing, retrieving and  one or more numbers in the cloud.
+**Counter**- a stateful container for storing, retrieving and  one or more numbers in the cloud. In aws represents a DynamoDB table with an atomic counter.
 `;
 
 export const validateInstructions = async (prompt: string) => {

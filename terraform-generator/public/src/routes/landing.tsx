@@ -6,10 +6,10 @@ import { AiInput } from "../componenets/input";
 import { useNavigate } from "react-router-dom";
 
 const examples = [
-  "Create an Api",
-  "Connect a Lambda to a Queue",
-  "Create a Public Bucket",
-  "Create a Counter",
+  "DynamoDB table with an atomic counter",
+  "An S3 bucket and a Lambda with permissions to write to it",
+  "A public S3 bucket",
+  "Lambda that gets triggered by an SQS queue",
 ];
 
 export const Landing = () => {
