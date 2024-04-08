@@ -2,17 +2,14 @@ import { Instructions } from "../componenets/instructions";
 import { useSelector } from "react-redux";
 import { Role, RootState } from "../state/root";
 import { AiInput } from "../componenets/input";
-import { CopyTerraform, DownloadTerraform } from "../componenets/terraform";
+import {
+  CopyTerraform,
+  DownloadTerraform,
+  toBinary,
+} from "../componenets/terraform";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-function toBinary(str: string): string {
-  const codeUnits = new Uint16Array(str.length);
-  for (let i = 0; i < codeUnits.length; i++) {
-    codeUnits[i] = str.charCodeAt(i);
-  }
-  return window.btoa(String.fromCharCode(...new Uint8Array(codeUnits.buffer)));
-}
+import Markdown from "react-markdown";
 
 export const Chat = () => {
   const messages = useSelector((state: RootState) => state.messages);
@@ -53,7 +50,15 @@ export const Chat = () => {
                   ))}
                 </div>
               ) : (
-                message
+                <Markdown
+                  components={{
+                    a: ({ ...props }) => (
+                      <a target="_blank" className="text-blue-300" {...props} />
+                    ),
+                  }}
+                >
+                  {message}
+                </Markdown>
               )}
             </div>
           ))}
@@ -71,15 +76,6 @@ export const Chat = () => {
             wing || "bring cloud;",
           )}`}
         />
-        <a
-          className="text-blue-400"
-          target="_blank"
-          href={`https://www.winglang.io/play/?theme=dark&code=${toBinary(
-            wing || "bring cloud;",
-          )}`}
-        >
-          link to the playground
-        </a>
       </div>
     </div>
   );

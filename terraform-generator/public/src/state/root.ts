@@ -1,5 +1,6 @@
 import { Dispatch, createSlice } from "@reduxjs/toolkit";
 import { Origin, ask } from "../requests";
+import { toBinary } from "../componenets/terraform";
 
 export enum Role {
   User = "user",
@@ -82,12 +83,20 @@ export const askAi =
       if (error) {
         dispatch(addMessage({ role: Role.AI, message: error }));
       }
-      if (wing) {
-        dispatch(setWing(wing));
-      }
       if (terraform) {
         dispatch(
           addMessage({ role: Role.AI, message: terraform, isTerraform: true }),
+        );
+      }
+      if (wing) {
+        dispatch(setWing(wing));
+        dispatch(
+          addMessage({
+            role: Role.AI,
+            message: `[Here's a link to wing's playground](https://www.winglang.io/play/?code=${toBinary(
+              wing,
+            )})`,
+          }),
         );
       }
     }
